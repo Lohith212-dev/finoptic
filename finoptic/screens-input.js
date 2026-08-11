@@ -141,7 +141,7 @@ const ADD_STEPS = {
     {h:'Commercials', f:[
       {k:'lic',    label:'Licences purchased',     kind:'num',   req:true},
       {k:'active', label:'Licences in active use', kind:'num',   req:true, hint:'Signed in within the last 30 days'},
-      {k:'cost',   label:'Monthly cost',           kind:'money', req:true, hint:'In $K, the way every figure in Finoptic is held'},
+      {k:'cost',   label:'Monthly cost',           kind:'money', req:true, hint:'In $K, the way every figure in Technomics is held'},
       {k:'term',   label:'Term',                   kind:'pick',  src:'terms', req:true},
       {k:'renew',  label:'Renews on',              kind:'date',  req:true}
     ]},
@@ -837,7 +837,7 @@ const titleOf = id => (typeof TITLES!=='undefined' && TITLES[id]) || id;
    for most of the session — is a box announcing that it has nothing in it. */
 function previewSide(){
   const T = addType();
-  if(!T) return `<p class="add-prev-wait">Pick what you are adding, and the row Finoptic
+  if(!T) return `<p class="add-prev-wait">Pick what you are adding, and the row Technomics
     would create appears here — in the columns of the table it lands in, as you type.</p>`;
   const L = stepOpen(1) ? addLanding() : null;
   if(!L) return `<p class="add-prev-wait">Identify the ${T.noun} and the row it would create
@@ -880,7 +880,7 @@ function stagedSection(){
     title:'Staged This Session · '+rows.length,
     sub:'Held in this browser tab only — a reload clears it', pad:false,
     body:table([{t:'Record'},{t:'Where It Would Land'},{t:'Annualised',r:true},{t:'Colour'},{t:''}], rows),
-    note:'The ledger has not moved, and that is correct. A row with no bill behind it would break the invariants in <b>data/SCHEMA.md</b> that make every screen agree — so Finoptic shows the record and leaves the ledger to the numbers it can prove.'})}</div>`;
+    note:'The ledger has not moved, and that is correct. A row with no bill behind it would break the invariants in <b>data/SCHEMA.md</b> that make every screen agree — so Technomics shows the record and leaves the ledger to the numbers it can prove.'})}</div>`;
 }
 
 /* ============================================================

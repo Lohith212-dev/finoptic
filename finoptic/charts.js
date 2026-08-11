@@ -110,22 +110,43 @@ function lineChart(series, labels, o={}){
      like two). One active month cannot be a line at all — smoothPath()
      already refuses a stroke through fewer than two points — so it draws as
      what it is, a bar per series, via barMonth(). */
+  const has = (s,i) => s.values[i]!==null && s.values[i]!==undefined;
+  const anyAt = i => series.some(s=>has(s,i));
   const solid = series.filter(s=>!s.dash);
   const activeIdx = [];
   labels.forEach((_,i)=>{
-    if(solid.some(s=>s.values[i]!==null&&s.values[i]!==undefined)) activeIdx.push(i);
+    if(solid.some(s=>has(s,i))) activeIdx.push(i);
   });
   if(activeIdx.length===1) return barMonth(solid, activeIdx[0], labels[activeIdx[0]], o);
-  let first=-1, last=-1;
-  labels.forEach((_,i)=>{
-    if(series.some(s=>s.values[i]!==null&&s.values[i]!==undefined)){ if(first<0) first=i; last=i; }
-  });
+  /* ROUND 21: THE WINDOW STARTS FROM THE SOLID SERIES AND GROWS ONLY WHILE THE
+     MONTHS STAY CONNECTED TO IT.  It used to be first..last over EVERY series,
+     which quietly handed the axis to the forecast — and the forecast is not
+     masked by the Date Range, because a projection is a projection whatever span
+     you are looking at.  In every dataset it holds two months at the very end
+     (Jun, Jul) and nothing before them, so selecting Jan-Apr produced an axis
+     running Jan..Jul: four months of data over 55% of the plot, three empty
+     slots, and a dashed segment floating on the right with a gap where May
+     should be.  That is round 17's "occupies only a corner" fault, reappearing
+     through the one series round 17 deliberately excluded from the count.
+     Walking outward while `anyAt` holds keeps the full-year chart exactly as it
+     was — there the forecast's Jul sits directly against the last closed month,
+     so it is still picked up and the projection still shows past the actuals —
+     while a forecast marooned three months beyond the selection is dropped,
+     which is the honest outcome: those months are not in the period. */
+  let first = activeIdx.length ? activeIdx[0] : -1;
+  let last  = activeIdx.length ? activeIdx[activeIdx.length-1] : -1;
+  if(first<0){ /* nothing solid at all — fall back to whatever any series holds */
+    labels.forEach((_,i)=>{ if(anyAt(i)){ if(first<0) first=i; last=i; } });
+  } else {
+    while(first>0 && anyAt(first-1)) first--;
+    while(last<labels.length-1 && anyAt(last+1)) last++;
+  }
   if(first>=0 && (first>0 || last<labels.length-1)){
     labels = labels.slice(first,last+1);
     series = series.map(s=>Object.assign({},s,{values:s.values.slice(first,last+1)}));
   }
   const all = series.flatMap(s=>s.values).filter(v=>v!==null&&v!==undefined);
-  if(!all.length) return emptyState('No data in this period','Widen the period filter to see a trend.');
+  if(!all.length) return emptyState('No data in this date range','Widen the date range to see a trend.');
   const max = o.max || Math.ceil(Math.max(...all)*1.12/10)*10, min=0;
   const x = i => L + i*((W-L-R)/(labels.length-1));
   const y = v => Tp + (H-Tp-B)*(1-(v-min)/(max-min));
@@ -200,7 +221,7 @@ function barMonth(series, idx, label, o={}){
   const W=o.w||680, H=o.h||244, L=44, R=12, Tp=12, B=24;
   const rows = series.map(s=>({name:s.name, v:s.values[idx], color:s.color}))
     .filter(r=>r.v!==null && r.v!==undefined);
-  if(!rows.length) return emptyState('No data in this period','Widen the period filter to see a trend.');
+  if(!rows.length) return emptyState('No data in this date range','Widen the date range to see a trend.');
   const max = o.max || Math.ceil(Math.max(...rows.map(r=>r.v))*1.12/10)*10 || 1;
   const y = v => Tp + (H-Tp-B)*(1-v/max);
   const slot = (W-L-R)/rows.length, bw = Math.min(64, slot*0.5);
@@ -451,7 +472,7 @@ function stackedBars(labels, series, o={}){
      truthy, so a series with no columns at all sailed past this guard and
      drew an axis labelled $-InfinityK. */
   if(!totals.length || !Math.max(...totals))
-    return emptyState('No data in this period','Widen the period filter.');
+    return emptyState('No data in this date range','Widen the date range.');
   const max = Math.ceil(Math.max(...totals)*1.12/10)*10;
   const bw = (W-L-R)/labels.length*0.62;
   const cx = i => L + (i+0.5)*((W-L-R)/labels.length);
@@ -531,7 +552,26 @@ function stackedBars(labels, series, o={}){
 const ranked = items => (items||[]).slice().sort((a,b)=>
   (a.tail?1:0) - (b.tail?1:0) || (b.v||0) - (a.v||0));
 
-/* Donut (§6): centre total in the hero-number face, legend as a mini-table. */
+/* Donut (§6): centre total in the hero-number face, legend as a mini-table —
+   or, with `o.callouts`, the name and figure drawn straight on the ring instead
+   of a legend beside it (Spend Mix, round 20). Default behaviour (no option
+   passed) is untouched byte-for-byte, so the three other donut+legend cards
+   (Cloud's By Environment, AI's Spend By Provider, Security Spend By Platform)
+   render exactly as before.
+
+   ROUND 21 DELETED `o.callouts` AND EVERYTHING THAT SERVED IT, so there is now
+   one donut again and it is the legend one.  Round 20 had removed the legend in
+   favour of name-and-figure labels drawn on the ring; round 21 reversed that on
+   review — "it displays all numbers and details… the chart is becoming too
+   crowded, we should keep it but show labels only on hover.  Restore the legend
+   we initially removed."  Labels on the plot cost radius twice over: the margin
+   they need, and then the ceiling on how many can be drawn before the leaders
+   stop being traceable.  A legend row is free, sorts with the ring by
+   construction (see legend(), components.js) and carries the brand mark, and
+   the exact figure for a slice was always a hover away in CHARTTIP.
+   DON'T REINSTATE THE CALLOUTS — the fault they were built to fix (a legend
+   duplicating the ring) is real, but the answer to it is a bigger plot, not
+   labels welded to the plot. */
 function donut(items,o={}){
   /* Ranked, so the biggest slice starts at twelve o'clock and the ring reads
      clockwise by size.  The legend beside it runs the identical comparator (see
@@ -560,6 +600,127 @@ function donut(items,o={}){
   g+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" class="donut-total">${money(total)}</text>
       <text x="${cx}" y="${cy+11}" text-anchor="middle" class="axis">${o.label||'YTD'}</text>`;
   return `<svg class="ct-donut" viewBox="0 0 ${S} ${S}" style="width:${S}px;margin:0 auto">${g}</svg>`;
+}
+
+/* ---- TWO-RING DONUT: PROVIDERS + THEIR SERVICES (§6, round 21) ----
+   A thick PROVIDER ring around a hole that holds the total, with each provider's
+   own SERVICES as a second ring outside it, each service spanning exactly its
+   parent's angular window.
+
+   ROUND 21 REBUILT THIS THREE TIMES and every step is a rule, because each fix
+   created the next fault:
+
+   1. It began as a two-ring donut sized `rOuter = S/2 - 90` — nine tenths of a
+      300px box spent on label margin and hole, leaving a 13px provider band and
+      a 20px service band on a 120px circle.  "Not legible… the donut itself
+      occupies very little area."
+   2. So the labels came off the margin and the hole was filled: a solid pie of
+      providers with the service ring around it, per "make that a pie chart and
+      place it in the center… that way the pie will have more area."  The area
+      problem was real and this fixed it — the plot went from 120px to 340px.
+   3. But a pie carries no figure, and drawing the figures on the plot instead is
+      what had eaten the radius in the first place: "it displays all numbers and
+      details… too crowded, show labels only on hover", then "it feels very
+      empty… we will cut out the center, as it was originally, and place the
+      total number there."
+
+   THE SETTLED SHAPE, and why each part is the way it is.  The hole is back, but
+   it is a HOLE, not a margin — 104px of it, holding the one figure nothing else
+   on the card states, at the same size and in the same place the Category pane
+   states its own.  The plot is 340px rather than 120px because NOTHING is
+   labelled on it: the three providers are named by legend() under the plot,
+   which also carries their brand marks and sorts by the same comparator this
+   does, and the ~24 service bands are named by CHARTTIP on hover.  Two things
+   follow that must not be undone — the service ring is shades of its parent's
+   own hue rather than eight more colours, so the legend's three rows still
+   explain every band on the chart; and every segment must carry a readout,
+   because hover is now the only way to name a service.
+   DON'T PUT LABELS BACK ON THE PLOT.  It has been tried in both directions and
+   the honest summary is that this chart has room for two rings or for labels,
+   not both, and the rings are the data.
+
+   `providers[].services` is generated (SCHEMA.md, "cloud.providers[].services");
+   a provider with none simply draws no outer band over its own wedge, the same
+   empty-is-absent rule as everywhere else. */
+function pieRing(providers,o={}){
+  const items = ranked(providers);
+  const total = items.reduce((s,i)=>s+i.v,0);
+  if(!total) return emptyState('Nothing to break down','No spend falls inside the current filters.');
+  const S=o.size||340, cx=S/2, cy=S/2;
+  /* Four radii, outside in: the SERVICE ring, a gap, the PROVIDER ring, the
+     hole.  The provider band is deliberately the thick one — it is the primary
+     dimension and the legend's three rows key to it — and the hole is sized off
+     what has to fit inside it rather than off a ratio, because what goes there
+     is a figure at the hero size and not a proportion of anything. */
+  const rOut=S/2-4, rSvcIn=rOut-(o.band||34);
+  const rProvOut=rSvcIn-5, rProvIn=Math.max(52, rProvOut-62);
+  const TAU=Math.PI*2, FULL=TAU-1e-9;
+  const P=(rad,ang)=>[cx+rad*Math.cos(ang), cy+rad*Math.sin(ang)];
+  const f=n=>n.toFixed(2);
+  /* A sweep of exactly 2π is the one case an arc path cannot draw — start and
+     end land on the same point and the segment collapses to nothing.  One
+     provider holding 100% of cloud is a real dataset, so it is special-cased as
+     a pair of half-circles, with the inner edge wound the other way to cut the
+     hole (fill-rule:evenodd would do it too; winding costs nothing). */
+  const band = (rO,rI,a,b) => (b-a)>=FULL
+    ? `M${cx} ${f(cy-rO)}A${rO} ${rO} 0 1 1 ${cx} ${f(cy+rO)}A${rO} ${rO} 0 1 1 ${cx} ${f(cy-rO)}Z`
+      +`M${cx} ${f(cy-rI)}A${rI} ${rI} 0 1 0 ${cx} ${f(cy+rI)}A${rI} ${rI} 0 1 0 ${cx} ${f(cy-rI)}Z`
+    : (([x1,y1],[x2,y2],[x3,y3],[x4,y4])=>{ const big=b-a>Math.PI?1:0;
+        return `M${f(x1)} ${f(y1)}A${rO} ${rO} 0 ${big} 1 ${f(x2)} ${f(y2)}L${f(x3)} ${f(y3)}A${rI} ${rI} 0 ${big} 0 ${f(x4)} ${f(y4)}Z`;
+      })(P(rO,a),P(rO,b),P(rI,b),P(rI,a));
+
+  let a=-TAU/4, pie='', ring='';
+  items.forEach((it,idx)=>{
+    const sw = it.v/total*TAU, b=a+sw;
+    const col = it.g||ec(it.k)||RAMP[idx%8];
+    /* `ct-key` marks the ring the LEGEND keys to.  Both rings are .ct-slice, so
+       without it "the slices, in order" is 27 paths on this chart and any check
+       comparing slice order against legend order reads a three-row legend
+       against twenty-seven slices and fails — which is exactly what
+       scratchpad/test-order.js did.  The class names the provider ring as the
+       one the legend explains; the service ring is explained by hover. */
+    pie += `<path class="ct-slice ct-key" d="${band(rProvOut,rProvIn,a,b)}" fill="var(${col})" fill-rule="evenodd"
+      stroke="var(--surface)" stroke-width="1.5"
+      ${CHARTTIP.attrs({t:it.k,c:col,v:moneyK(it.v),
+        d:share(it.v,total)+' of '+money(total)+' '+(o.label||'total')})}/>`;
+    /* services[] is a fixed, authored full-year split — it does not shrink the
+       way `it.v` does under a narrower Date Range, so its own sum is what each
+       share is taken against, never `it.v` directly.  Dividing by `it.v` let a
+       single month's provider total (small) sit under a full-year service
+       figure (comparatively huge), producing a sweep many times a full circle
+       — the three-full-circles-instead-of-a-ring failure this had in round 20.
+       The dollar SHOWN is rescaled to the current total so the readout still
+       agrees with the Date Range pill; only the proportions are held. */
+    const services = ranked(it.services||[]);
+    const svcTotal = services.reduce((s,x)=>s+x.v,0);
+    if(services.length && svcTotal){
+      let sa=a;
+      services.forEach((sv,sidx)=>{
+        const q = sv.v/svcTotal, sb = sa+q*sw;
+        /* fill-opacity, not opacity: the hover-dim rule in §6 sets `opacity` on
+           every slice, and an attribute cannot survive a CSS declaration — the
+           shading would be wiped out on the hover it is meant to survive. */
+        const shade = (0.95 - sidx*(0.5/Math.max(1,services.length-1))).toFixed(3);
+        ring += `<path class="ct-slice" d="${band(rOut,rSvcIn,sa,sb)}" fill="var(${col})" fill-rule="evenodd"
+          fill-opacity="${shade}" stroke="var(--surface)" stroke-width="1"
+          ${CHARTTIP.attrs({t:sv.k+' · '+it.k, c:col, v:moneyK(it.v*q),
+            d:share(sv.v,svcTotal)+' of '+moneyK(it.v)+' '+it.k})}/>`;
+        sa = sb;
+      });
+    }
+    a = b;
+  });
+  /* THE TOTAL SITS IN THE HOLE, exactly as donut() states its own — "we will cut
+     out the center, as it was originally, and place the total number there,
+     similar to how we show the total for the category donut chart."  A solid pie
+     read as flat and unhelpful ("it feels very empty… the chart itself looks
+     sparse"): the middle of a share chart is the one place a figure can go
+     without competing with the rings, and both panes of this card now answer
+     "how much altogether" in the same place, in the same face. */
+  const centre = `<text x="${cx}" y="${cy-2}" text-anchor="middle" class="donut-total">${money(total)}</text>
+      <text x="${cx}" y="${cy+13}" text-anchor="middle" class="axis">${o.label||'YTD'}</text>`;
+  return `<svg class="ct-donut ct-piering" viewBox="0 0 ${S} ${S}"
+    style="width:100%;max-width:${S}px;margin:0 auto;display:block">${ring}${pie}${centre}</svg>`;
 }
 
 /* Horizontal breakdown bars.
@@ -684,8 +845,8 @@ function bandChart(o){
      y-coordinate on the chart divides by `max`, which that anchor took to
      zero: every line, dot and gridline came out NaN instead of one caught
      card. */
-  if(!knownActual.length) return emptyState('No data in this period',
-    'Widen the period filter to include a closed month.');
+  if(!knownActual.length) return emptyState('No data in this date range',
+    'Widen the date range to include a closed month.');
   const last=knownActual.slice(-1)[0];
   const pad=n=>new Array(closed-1).fill(null).concat(n);
   const base=pad([last,Math.round(last*.99),Math.round(last*1.01),Math.round(last*1.04),Math.round(last*1.06)]);

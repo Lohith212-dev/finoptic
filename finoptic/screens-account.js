@@ -361,14 +361,14 @@ function acctMailto(d, link){
     String(d.name).trim() + ',',
     '',
     'You have been given ' + accessLevel(d.level).label + ' access to the Crozaint '
-      + 'workspace in Finoptic, opening on the ' + viewLabel(defaultViewFor(d.dept)) + ' view.',
+      + 'workspace in Technomics, opening on the ' + viewLabel(defaultViewFor(d.dept)) + ' view.',
     '',
     link,
     '',
-    '— Sent from Finoptic, by Crozaint. If you were not expecting this, you can ignore it.'
+    '— Sent from Technomics, by Crozaint. If you were not expecting this, you can ignore it.'
   ].join('\n');
   return 'mailto:' + encodeURIComponent(String(d.email).trim())
-    + '?subject=' + encodeURIComponent('You have been invited to Finoptic')
+    + '?subject=' + encodeURIComponent('You have been invited to Technomics')
     + '&body=' + encodeURIComponent(body);
 }
 
@@ -454,7 +454,7 @@ function acctPaneDone(){
       <a class="btn" href="${acctMailto(d, PANE.link)}">Email the invite</a>
       <button class="btn" type="button" data-acct="another">Add another</button>
     </div>
-    <p class="pane-note">The link opens Finoptic on the ${viewLabel(view)} view. Nothing has been
+    <p class="pane-note">The link opens Technomics on the ${viewLabel(view)} view. Nothing has been
        sent yet — copy it, or use Email the invite to send it to
        ${attrEsc(String(d.name).trim())}.</p>
   </div>`;
@@ -671,7 +671,7 @@ S.team = () => {
   const depts = new Set(rows.map(m=>m.dept));
   const views = new Set(rows.map(m=>m.view));
   return acctHead('Team & Access',
-    'Who can open Finoptic, what each of them is allowed to change, and which view they land on when they sign in.',
+    'Who can open Technomics, what each of them is allowed to change, and which view they land on when they sign in.',
     (D.meta.company ? D.meta.company + ' · ' : '') + 'Crozaint workspace')
   + `<div class="grid">
   ${kpi({k:'People With Access',v:String(rows.length),hero:true,ic:'users',
@@ -814,7 +814,7 @@ S.signin = () => {
         </div>
       </div>
 
-      <p class="signin-foot">Finoptic · by Crozaint · invite-only workspace</p>
+      <p class="signin-foot">Technomics · by Crozaint · invite-only workspace</p>
     </div>
 
     <div class="signin-hero">
@@ -921,7 +921,7 @@ document.addEventListener('click', e=>{
     case 'copy': {
       const url = PANE.link, view = defaultViewFor(PANE.d.dept);
       const done = ()=>toast('Invite link copied',
-        'It opens Finoptic on the ' + viewLabel(view) + ' view.');
+        'It opens Technomics on the ' + viewLabel(view) + ' view.');
       const manual = ()=>toast('Copy this link', url);
       /* The same three-step fallback as shareView(): the clipboard API can be
          refused outright on a file:// origin, so a real copy has to survive

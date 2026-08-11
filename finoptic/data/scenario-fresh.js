@@ -413,6 +413,36 @@ FINOPTIC.scenario(
           null,
           null,
           null
+        ],
+        "services": [
+          {
+            "k": "Compute",
+            "v": 4
+          },
+          {
+            "k": "Database",
+            "v": 2
+          },
+          {
+            "k": "Storage",
+            "v": 2
+          },
+          {
+            "k": "Networking",
+            "v": 1
+          },
+          {
+            "k": "Kubernetes",
+            "v": 2
+          },
+          {
+            "k": "Serverless",
+            "v": 1
+          },
+          {
+            "k": "AI services",
+            "v": 1
+          }
         ]
       },
       {
@@ -431,6 +461,32 @@ FINOPTIC.scenario(
           null,
           null,
           null
+        ],
+        "services": [
+          {
+            "k": "Compute",
+            "v": 1
+          },
+          {
+            "k": "Database",
+            "v": 2
+          },
+          {
+            "k": "Storage",
+            "v": 1
+          },
+          {
+            "k": "Networking",
+            "v": 1
+          },
+          {
+            "k": "Kubernetes",
+            "v": 1
+          },
+          {
+            "k": "AI services",
+            "v": 1
+          }
         ]
       }
     ],

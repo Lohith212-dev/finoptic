@@ -197,7 +197,6 @@ const kpi = ({k,v,foot,delta,dir,hero,ic,tone,ytd,spark,sparkOpts}) => {
           row is emitted only if it has content, so a tile with no delta is one line
           shorter rather than one line emptier. */''}
     ${ytd||delta?`<div class="kpi-f">${ytd?`<span class="kpi-ytd">${ytd}</span>`:''}${delta?`<span class="delta ${dir||'flat'}">${delta}</span>`:''}</div>`:''}
-    ${foot?`<div class="kpi-f kpi-note">${foot}</div>`:''}
   </div>`;
 };
 
@@ -846,7 +845,7 @@ function tblColCaps(cols, rows){
 
 const table = (cols, rows, totalRow, o={}) => {
   if(rows.length===0)
-    return emptyState('No Rows Match These Filters','Widen the period, or clear a filter in the bar above.');
+    return emptyState('No Rows Match These Filters','Widen the date range, or clear a filter in the bar above.');
   if(o.order !== 'keep') rows = tableOrder(cols, rows);
   const id = 'tb'+(++tblUid);
   const caps = tblColCaps(cols, rows);

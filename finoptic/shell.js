@@ -200,7 +200,7 @@ function renderFilters(){
          it permanently is honest rather than shouty. */
       return `<span class="chipwrap">
         <button class="chip ${d==='period'
-            ? 'primary'+(F.period===CUSTOM_PERIOD?' custom':'') : ''} ${set?'set':''}" data-dim="${d}"
+            ? 'primary'+(F.period===CUSTOM_PERIOD||F.period===MONTH_RANGE?' custom':'') : ''} ${set?'set':''}" data-dim="${d}"
                 aria-haspopup="listbox" aria-expanded="false">
           ${icon(DIMS[d].icon,true)}
           ${/* The dimension name is dropped when the value already starts with
@@ -215,16 +215,18 @@ function renderFilters(){
   const est = D.estimated ? ' · filtered' : '';
   document.getElementById('asof').textContent = `As of ${D.meta.asOf}${est}`;
 }
-/* The pill has room for the span, not for the fiscal-year gloss around it. */
+/* The pill shows the month name as-is for a single month; the full-year
+   default and a custom range both resolve to the span they cover. */
 const shortPeriod = v => v===CUSTOM_PERIOD
   ? (F.range ? rangeSummary(F.range) : 'Custom')
-  : (v.split(' · ')[1] || v.replace(' · Aug–Jun',''));
+  : v===MONTH_RANGE ? spanLabel(F.span)
+  : v===FULL_YEAR_PERIOD ? monthSpanLabel(fullYearMonths())
+  : v;
 /* What a custom range actually resolved to.  Months, not dates, because months
    are what it resolved to — see rangeMonths(). */
 function rangeSummary(r){
-  const ms = rangeMonths(r), M = RAW.meta.months;
-  if(!ms.length) return 'Custom';
-  return ms.length===1 ? M[ms[0]] : M[ms[0]]+'–'+M[ms[ms.length-1]];
+  const ms = rangeMonths(r);
+  return ms.length ? monthSpanLabel(ms) : 'Custom';
 }
 
 /* ---- the reconciliation strip (§7) ----
@@ -396,8 +398,11 @@ function rowCells(r){
 function exportView(){
   const tables = [...document.querySelectorAll('#screen table')];
   const scope = liveFilters().map(d=>DIMS[d].label+'='+sel(d).join('/'))
-    .concat([F.period===CUSTOM_PERIOD ? 'Custom · '+rangeSummary(F.range) : F.period]).join(' · ');
-  let csv = ['Finoptic — '+TITLES[current], 'Dataset,'+RAW.label, 'Scope,'+csvCell(scope),
+    .concat([F.period===CUSTOM_PERIOD ? 'Custom · '+rangeSummary(F.range)
+      : F.period===MONTH_RANGE ? spanLabel(F.span)+' · '+monthSpanLabel(spanMonths(F.span))
+      : F.period===FULL_YEAR_PERIOD ? 'Full year · '+monthSpanLabel(fullYearMonths())
+      : F.period]).join(' · ');
+  let csv = ['Technomics — '+TITLES[current], 'Dataset,'+RAW.label, 'Scope,'+csvCell(scope),
              'Generated as of,'+D.meta.asOf, ''].join('\n')+'\n';
   tables.forEach((t,i)=>{
     const heading = t.closest('.card')?.querySelector('.card-h h3')?.textContent || ('Table '+(i+1));
@@ -424,8 +429,8 @@ function exportView(){
      title or an opportunity name arrived as "â€"" and every middot as "Â·".
      A leading U+FEFF is the only thing Excel reads as "this is UTF-8", and it is
      harmless to every other consumer. */
-  download(`finoptic-${current}-${RAW.id}-${stamp}.csv`, '﻿'+csv, 'text/csv;charset=utf-8');
-  download(`finoptic-dataset-${RAW.id}.json`, JSON.stringify(RAW,null,2), 'application/json');
+  download(`technomics-${current}-${RAW.id}-${stamp}.csv`, '﻿'+csv, 'text/csv;charset=utf-8');
+  download(`technomics-dataset-${RAW.id}.json`, JSON.stringify(RAW,null,2), 'application/json');
   const blocks = tables.length + lists.length;
   toast('Exported '+blocks+' block'+(blocks===1?'':'s'),
         'CSV of this screen, plus the full dataset as JSON.');
@@ -444,8 +449,9 @@ function stateUrl(){
      which is what makes the cheap encoding safe rather than merely convenient —
      if one ever does, this has to become a repeated key. */
   MULTI.forEach(k=>{ if(has(k)) p.set(k, sel(k).join(',')); });
-  if(F.period!==PERIODS[0][0]) p.set('period', F.period);
+  if(F.period!==FULL_YEAR_PERIOD) p.set('period', F.period);
   if(F.period===CUSTOM_PERIOD && F.range) p.set('range', F.range.from+'~'+F.range.to);
+  if(F.period===MONTH_RANGE && F.span) p.set('span', F.span.from+'~'+F.span.to);
   return location.href.split('#')[0] + '#' + current + '?' + p.toString();
 }
 function shareView(){
@@ -484,7 +490,7 @@ function loadScenario(id,keepFilters){
      feed was connected, and the connect pane opened on "Done".  Two things
      describing one workspace have to agree. */
   if(typeof onbSyncToDataset==='function') onbSyncToDataset();
-  if(!keepFilters){ MULTI.forEach(k=>F[k]=[]); F.period = PERIODS[0][0]; F.range = null; }
+  if(!keepFilters){ MULTI.forEach(k=>F[k]=[]); F.period = FULL_YEAR_PERIOD; F.range = null; F.span = null; }
   /* The tone dot now rides on the profile menu's dataset row rather than on a
      pill in the top bar. */
   const pick = document.getElementById('scenario-pick');
@@ -558,7 +564,7 @@ function summaryHead(){
 
    The default is a fallback on the attribute rather than a written value, so the
    reader's own last choice still wins for the rest of the session. */
-const SUM_TABS = [['insights','Key Insights'],['metrics','Metrics']];
+const SUM_TABS = [['metrics','Metrics'],['insights','Key Insights']];
 const sumTab = () => document.documentElement.getAttribute('data-sum') || 'metrics';
 
 /* ---- the summary panel (§7) ----
@@ -766,6 +772,14 @@ function closeMenus(except){
   document.querySelectorAll('.menu').forEach(m=>{ if(m!==except) m.hidden = true; });
   document.querySelectorAll(MENU_TRIGGERS).forEach(b=>b.setAttribute('aria-expanded','false'));
   document.querySelectorAll('.menu.vals').forEach(m=>m.remove());
+  /* The pending first half of a month range dies with the grid it was picked in.
+     Surviving the close would mean a click on March today extending a range from
+     a January clicked ten minutes ago — a selection the reader never saw the
+     start of, made out of two clicks separated by everything in between.
+     Because the first click never writes to F, abandoning a half-finished pick
+     this way leaves the applied period exactly as it was, which is what every
+     picker the research looked at does. */
+  periodAnchor = null; periodHover = null;
 }
 /* A filter pill's value list is built on demand from the ACTIVE dataset, so it
    can never offer a value the loaded scenario doesn't contain.
@@ -782,13 +796,35 @@ function openDimMenu(chip,dim){
   m.dataset.forDim = dim;
   m.innerHTML = dim==='period' ? periodMenuHTML() : multiMenuHTML(dim);
   m.addEventListener('click', e=>{
-    /* PERIOD is single-select and closes on choice: a period is one span of time,
-       so picking a second one is a replacement, not an addition. */
+    /* PERIOD IS TWO CLICKS, START THEN END, and nothing is applied until the
+       second one lands.  A period is still one span of time — picking a second
+       month is never an addition, it completes the span the first one opened.
+
+       THE FIRST CLICK CHANGES NOTHING BUT THE MENU, and that is the point.  An
+       earlier version applied the first month immediately, on the reasoning that
+       someone who wanted March alone should get it without a second click — but
+       that makes the board jump to a one-month view the reader did not ask for,
+       halfway through asking for something else, and it quietly contradicts the
+       readout above the grid that is at that moment saying "End: pick a month".
+       The single-month case is the reader's own: "if a user wants to select only
+       one month, they can click the same month for both the start and end." */
     if(dim==='period'){
       if(e.target.closest('[data-custom]')){ openRangeMenu(chip); return; }
       const o = e.target.closest('[data-val]'); if(!o) return;
-      F.period = o.dataset.val; F.range = null;
-      closeMenus(); refresh(); return;
+      const i = +o.dataset.idx;
+      /* FIRST CLICK: anchor only.  F is untouched, so the board keeps showing
+         whatever period was already applied — but periodPainted() now returns the
+         anchor instead of that period, so the grid shows one selection rather
+         than the old range plus a new pick. */
+      if(periodAnchor==null){ periodAnchor = i; periodHover = null; periodPaint(m); return; }
+      F.range = null;
+      if(periodAnchor===i){ F.period = o.dataset.val; F.span = null; }
+      else { F.period = MONTH_RANGE; F.span = {from:periodAnchor, to:i}; }
+      const set = F.span, n = set ? spanMonths(set).length : 1;
+      closeMenus(); refresh();
+      toast('Date range set', (set ? spanLabel(set) : o.dataset.val)
+        +' — '+n+' month'+(n===1?'':'s')+' of closed data.');
+      return;
     }
     /* Everything else is multi-select and STAYS OPEN.  Closing after each pick
        would make choosing three products three round trips through the pill,
@@ -810,9 +846,32 @@ function openDimMenu(chip,dim){
       b.hidden = !!q && !b.dataset.val.toLowerCase().includes(q);
     });
   });
+  /* HOVER PREVIEW, period only.  Delegated on the menu rather than bound per
+     cell, so it survives a repaint, and cleared on mouseleave of the GRID rather
+     than of each cell — leaving one cell for the next is not leaving the grid,
+     and clearing per cell would flicker the band on every crossing.
+     `periodHover` is only read while an anchor is pending (periodPainted), so
+     these listeners cost nothing before the first click. */
+  if(dim==='period'){
+    m.addEventListener('mouseover', e=>{
+      const o = e.target.closest('.mo:not([disabled])');
+      if(!o || periodAnchor==null) return;
+      const i = +o.dataset.idx;
+      if(i===periodHover) return;
+      periodHover = i; periodPaint(m);
+    });
+    const grid = m.querySelector('.mo-grid');
+    if(grid) grid.addEventListener('mouseleave', ()=>{
+      if(periodAnchor==null || periodHover==null) return;
+      periodHover = null; periodPaint(m);
+    });
+  }
   document.body.appendChild(m);
   chip.setAttribute('aria-expanded','true');
   placeMenu(m, chip);
+  /* The grid renders bare and is painted once it is in the document — one code
+     path for the first paint, every hover and every click. */
+  if(dim==='period') periodPaint(m);
   const find = m.querySelector('[data-opt-find]'); if(find) find.focus();
 }
 /* Repaints the menu's own state after a toggle.  The menu lives on <body>, so a
@@ -846,13 +905,195 @@ function multiMenuHTML(dim){
         ${ec(v)?`<i style="background:var(${ec(v)})"></i>`:''}
         <span class="opt-n">${v}</span></button>`).join('')}`;
 }
+/* ---- THE DATE RANGE PICKER: a 4x3 grid of months (§7) ----
+   Jan-Dec in three rows of four, endpoints filled solid, the months between them
+   carrying a pale band that joins them into one bar.  Drawn to a supplied
+   reference — "the current UX is unclear; could we redesign it to match the
+   shared screenshot, showing how a date range is selected?"
+
+   IT REPLACES A TWELVE-ROW LIST, and the list was the problem rather than the
+   labels on it.  A vertical list of months is a list of ALTERNATIVES: it looks
+   exactly like the Category and Product menus beside it, where one row is one
+   choice, so nothing about it suggested that two clicks meant something
+   different from one.  It also could not show a range: a highlighted run in a
+   scrolling list, with a month or two below the fold, reads as several separate
+   selections.  A grid can show the span as one shape, which is the whole point.
+
+   TWO CLICKS ARE STATED, NOT IMPLIED — "please make sure the user understands
+   that they need to make two selections, for the start and for the end."  So the
+   grid sits under a Start -> End readout with the field awaiting the next click
+   outlined, which turns "two selections" into something visible rather than
+   something to be inferred, and the hint spells out the single-month case ("they
+   can click the same month for both the start and end").
+   A month past the dataset's closed window stays present but disabled — hiding
+   it would reflow the grid every time the scenario changes, and the custom-range
+   calendar already sets that precedent (SCHEMA.md: a picker that reaches a month
+   the data cannot answer for is offering a query with no honest result).
+
+   ---- ROUND 21b, AFTER READING WHAT OTHER PICKERS DO ----
+   "It is glitchy and… not the right UX.  We need to research how other companies
+   handle it."  The bug reported was real: with Jan-Mar applied, clicking a fourth
+   month painted the OLD range and the new pick at the same time, so the grid
+   showed two selections at once and read as an accumulating multi-select.  Three
+   things came out of the research and all three are here.
+
+   1. THERE IS ONE PAINTED RANGE, NEVER TWO.  Adobe's react-aria is explicit in
+      `useRangeCalendarState` — `highlightedRange = anchorDate ? makeRange(anchor,
+      focused) : value && makeRange(value.start, value.end)` — so the moment an
+      anchor exists the committed range stops being drawn.  Ignite UI states the
+      rule in prose: "if a range is already selected, clicking any other date
+      will start a new range selection."  periodPainted() below is that one
+      expression, and it is the only thing any cell state is derived from.
+   2. THE APPLIED FILTER SURVIVES THE FIRST CLICK.  Every reference
+      implementation leaves the committed value alone until the second click
+      lands — only the HIGHLIGHT clears.  So a half-finished pick cannot leave
+      the board showing a period nobody asked for, and abandoning the menu
+      (Escape, or clicking away) leaves the previous range exactly as it was.
+      This is the one place the reported proposal needed a correction: clear the
+      paint, keep the filter.
+   3. HOVER PREVIEW IS NOT A FLOURISH, IT IS THE FIX.  It is what makes the
+      second step feel deliberate instead of broken — with an anchor set and no
+      preview, the grid just looks like it forgot the range it had.  So the band
+      follows the pointer between the anchor and the hovered month, and the
+      Start/End fields fill in with it.
+   Also from the research, and uncontested: endpoints picked backwards SWAP
+   rather than restart (Ant Design ships `order`, default true; react-aria's
+   makeRange does the same) — spanEnds() takes min/max, so this was already true;
+   and the same month twice IS a one-month range rather than an error.
+
+   ONE FINDING IS NOT IMPLEMENTED, DELIBERATELY.  Analytics and finance products
+   overwhelmingly put a range behind an explicit Apply — GA4, Looker Studio, AWS
+   Cost Explorer, NetSuite — because there a range change re-queries something
+   expensive.  Nothing here is expensive, and every other pill in this bar
+   applies live (multiMenuHTML's menu stays open and calls refresh() on each
+   toggle), so an Apply on this one control alone would make the period the odd
+   one out in its own filter bar.  Worth revisiting if the real product's
+   period change ever costs a round trip.
+
+   `periodAnchor` is the pending first click and `periodHover` the month under
+   the pointer.  Both live only as long as the menu is open — closeMenus() clears
+   them — so a range is always two clicks made in one visit to the grid. */
+let periodAnchor = null, periodHover = null;
+/* THE ONE RANGE THAT IS PAINTED, as fiscal-month indexes, low first.  A pending
+   anchor wins over the committed selection; with no anchor it falls back to
+   whatever is applied (a span, a single month, or nothing).  Everything else in
+   this menu — cell fills, the two fields, the hint, the live region — reads this
+   and nothing else, which is what makes "two selections at once" unrepresentable
+   rather than merely unlikely. */
+function periodPainted(){
+  if(periodAnchor!=null){
+    const b = periodHover!=null ? periodHover : periodAnchor;
+    const x = PERIODS[periodAnchor][1][0], y = PERIODS[b][1][0];
+    return [Math.min(x,y), Math.max(x,y)];
+  }
+  if(F.period===MONTH_RANGE && F.span) return spanEnds(F.span);
+  const one = PERIODS.find(p=>p[0]===F.period);
+  return one ? [one[1][0], one[1][0]] : [-1,-1];
+}
+/* Repaints in place rather than re-rendering the menu.  Hover has to repaint on
+   every mouseover, and rebuilding innerHTML under the pointer would replace the
+   element the pointer is over — which drops the very mouseleave that clears the
+   preview and leaves a band frozen on the grid. */
+function periodPaint(m){
+  const [lo,hi] = periodPainted();
+  const part = fi => lo>=0 && fi>=lo && fi<=hi;
+  const cells = [...m.querySelectorAll('.mo')];
+  cells.forEach((b,i)=>{
+    const fi = PERIODS[i][1][0], col = i%4;
+    const end = part(fi) && (fi===lo || fi===hi);
+    const mid = part(fi) && !end;
+    b.classList.toggle('on', end);
+    b.classList.toggle('in', mid);
+    /* The band is square where the run continues into the next cell and rounded
+       where it stops, so each row's stretch reads as one bar. */
+    b.classList.toggle('rl', mid && (col===0 || !part(PERIODS[i-1][1][0])));
+    b.classList.toggle('rr', mid && (col===3 || !part(PERIODS[i+1][1][0])));
+    b.setAttribute('aria-selected', String(part(fi)));
+  });
+  /* The fields show the ORDERED pair, so hovering backwards off the anchor reads
+     as the range it will actually apply rather than as start-after-end. */
+  const pending = periodAnchor!=null, previewing = pending && periodHover!=null;
+  const sTxt = lo>=0 ? FY_MONTH_NAME[lo] : '';
+  const eTxt = (pending && !previewing) ? '' : (hi>=0 ? FY_MONTH_NAME[hi] : '');
+  const fld = (key,val,now) => {
+    const el = m.querySelector('[data-mo-fld="'+key+'"]');
+    if(!el) return;
+    el.classList.toggle('mo-now', !!now);
+    el.classList.toggle('mo-none', !val);
+    el.querySelector('b').textContent = val || 'Pick a month';
+  };
+  fld('start', sTxt, !pending);
+  fld('end', eTxt, pending);
+  /* The hint does NOT name the anchor month.  It used to end "…the same month
+     again for February alone", which contradicted the fields the moment the
+     preview ran backwards off the anchor: hovering August from a February anchor
+     shows Start August / End February, because that is the order the range will
+     apply in, and a hint naming February as the start disagreed with the box
+     directly above it. */
+  const hint = m.querySelector('[data-mo-hint]');
+  if(hint) hint.textContent = pending
+    ? 'Now pick the month it ends on — or the same month again for a single month.'
+    : 'Pick two months: the start, then the end. The same month twice selects that month alone.';
+  /* Announced, because the range is communicated by fill colour across twelve
+     cells and none of that reaches a screen reader.  APG has no range-calendar
+     pattern, so this is the Grid pattern's aria-selected plus a polite live
+     region naming the span. */
+  const live = m.querySelector('[data-mo-live]');
+  if(live) live.textContent = lo<0 ? ''
+    : (pending && !previewing) ? PERIODS[periodAnchor][0]+' selected as the start month'
+    : monthSpanLabel(rangeOfFiscal(lo,hi));
+}
+/* The closed months between two fiscal indexes — the same set spanMonths() would
+   resolve, expressed from the pair the menu is painting rather than from a click
+   pair it does not have yet. */
+const rangeOfFiscal = (lo,hi) => {
+  const out = [];
+  for(let i=lo;i<=hi;i++) if(i < closedCount()) out.push(i);
+  return out;
+};
 function periodMenuHTML(){
-  return `<div class="menu-h">Period</div>`
-    + PERIODS.map(p=>`<button class="menu-opt ${F.period===p[0]?'on':''}" type="button" data-val="${p[0]}">
-        <span class="opt-n">${p[0]}</span><span class="cnt">${p[1].length} mo</span></button>`).join('')
-    + `<div class="menu-sep"></div>
+  /* Cells only — no state.  periodPaint() sets every class and every label, so
+     there is exactly one place that decides what the grid looks like. */
+  const fld = key => `<div class="mo-fld" data-mo-fld="${key}">
+      <span class="mo-lbl">${key==='start'?'Start':'End'}</span><b></b></div>`;
+  return `<div class="menu-h">${DIMS.period.label}</div>
+    <div class="mo-head">${fld('start')}
+      <span class="mo-arrow" aria-hidden="true">→</span>
+      ${fld('end')}</div>
+    <div class="mo-hint" data-mo-hint></div>
+    <div class="mo-grid" role="listbox" aria-label="Months">`
+    + PERIODS.map((p,i)=>{
+        const closed = p[1][0] < closedCount();
+        return `<button class="mo" type="button" role="option" aria-selected="false"
+            data-val="${p[0]}" data-idx="${i}"
+            ${closed?'':' disabled title="Not closed yet"'}
+          >${p[0].slice(0,3)}</button>`;
+      }).join('')
+    + `</div>
+       ${/* WHY THAT MONTH IS GREY.  The reported example was "I then click another
+             month, say July" — and July is exactly the month every dataset has
+             not closed, so the click did nothing and the only explanation was a
+             `title` tooltip that needs a hover and a pause to find.  A dimmed
+             cell with no reason reads as a dead control.  Named from the data, so
+             it follows the scenario: a ten-week-old workspace greys out ten
+             months and says so. */''}
+       ${unclosedNote()}
+       <div class="mo-live sr-only" data-mo-live aria-live="polite"></div>
+       <div class="menu-sep"></div>
        <button class="menu-opt opt-custom ${F.period===CUSTOM_PERIOD?'on':''}" type="button" data-custom>
          ${icon('calendar',true)}<span class="opt-n">Custom range…</span></button>`;
+}
+/* The months the grid is showing but cannot answer for, as a span rather than a
+   list — "Sep–Jul not closed yet" beats eleven comma-separated names. */
+function unclosedNote(){
+  const open = [];
+  for(let i=closedCount(); i<PERIODS.length; i++) open.push(i);
+  if(!open.length) return '';
+  const M = RAW.meta.months;
+  const names = open.map(fi=>M[fi]).filter(Boolean);
+  if(!names.length) return '';
+  const span = names.length===1 ? names[0] : names[0]+'–'+names[names.length-1];
+  return `<div class="mo-note">${span} not closed yet</div>`;
 }
 
 /* ---- the custom range calendar (§7) ----
@@ -906,7 +1147,7 @@ function openRangeMenu(anchor){
       F.period = CUSTOM_PERIOD;
       F.range = {from:isoDay(calFrom), to:isoDay(calTo||calFrom)};
       closeMenus(); refresh();
-      toast('Period set', rangeSummary(F.range)+' — whole months, because the dataset is monthly.');
+      toast('Date range set', rangeSummary(F.range)+' — whole months, because the dataset is monthly.');
     }
   });
   placeMenu(m, anchor);
@@ -1331,7 +1572,7 @@ document.getElementById('json-file').addEventListener('change', e=>{
   r.onload = () => {
     try{
       const payload = JSON.parse(r.result);
-      if(!payload.id || !payload.categories) throw new Error('not a Finoptic dataset');
+      if(!payload.id || !payload.categories) throw new Error('not a Technomics dataset');
       loadScenario(FINOPTIC.adopt(payload));
       refresh();
       toast('Loaded '+(payload.label||payload.id), f.name+' · '+(payload.blurb||''));
@@ -1401,14 +1642,26 @@ function restore(){
     const v = p.get(k);
     F[k] = v ? v.split(',').filter(Boolean) : [];
   });
-  F.period = p.get('period') || PERIODS[0][0];
+  F.period = p.get('period') || FULL_YEAR_PERIOD;
   const r = p.get('range');
   F.range = (F.period===CUSTOM_PERIOD && r && r.includes('~'))
     ? {from:r.split('~')[0], to:r.split('~')[1]} : null;
+  /* Two list positions, and both have to survive the round trip as NUMBERS —
+     `+` not parseInt-by-accident, because "0~4" carries a legitimate index 0
+     (January) and a string "0" would sail through a truthiness check and then
+     index PERIODS as undefined. */
+  const sp = p.get('span');
+  F.span = null;
+  if(F.period===MONTH_RANGE && sp && sp.includes('~')){
+    const a = +sp.split('~')[0], b = +sp.split('~')[1];
+    if(Number.isInteger(a) && Number.isInteger(b)
+       && a>=0 && b>=0 && a<PERIODS.length && b<PERIODS.length) F.span = {from:a, to:b};
+  }
   /* A custom period with no range restored is a period that means nothing, so it
      falls back rather than silently resolving to the full year under a chip that
-     still says "Custom". */
-  if(F.period===CUSTOM_PERIOD && !F.range) F.period = PERIODS[0][0];
+     still says "Custom".  Same for a month range with no span. */
+  if(F.period===CUSTOM_PERIOD && !F.range) F.period = FULL_YEAR_PERIOD;
+  if(F.period===MONTH_RANGE && !F.span) F.period = FULL_YEAR_PERIOD;
   /* WITH NO LINK TO RESTORE, OPEN ON SIGN-IN.  It is the product's front door, so
      it is the product's home page, and a demo that starts there tells the story in
      the order a customer would meet it.

@@ -426,7 +426,7 @@ FINOPTIC.scenario(
   "insights": {
     "overview": {
       "what": "Nothing has been connected to this workspace yet, so there is no spend to report.",
-      "why": "Finoptic reports closed months against an approved plan. Ashcombe Retail has neither: no cost feed is landing and no budget has been loaded.",
+      "why": "Technomics reports closed months against an approved plan. Ashcombe Retail has neither: no cost feed is landing and no budget has been loaded.",
       "do": "Start with the cost feeds. They are one read-only role per provider, half a day once, and they turn on six of the seventeen screens on their own.",
       "doValue": "Step 01",
       "doLabel": "connect cost feeds"

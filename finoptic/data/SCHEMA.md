@@ -42,8 +42,11 @@ payload, and the **Load JSON…** picker reads it back through `FileReader`, so 
     see "The `monthly` block" below for which is which and why the two cannot share one rule.
 20. For every opportunity, `opps[].spend >= opps[].s` — an opportunity cannot save more than the spend
     it comes out of. See "`opps[].spend`" below for how the figure is generated.
+21. For every entry in `cloud.providers[]` that carries `services`, `sum(providers[].services[].v)` ==
+    `providers[].v`. See "`cloud.providers[].services`" below for what the field is and how it was
+    generated.
 
-Invariants 1–16, 19 and 20 are **arithmetic** and hold for every dataset including the empty one — `0 − 0 = 0`
+Invariants 1–16, 19, 20 and 21 are **arithmetic** and hold for every dataset including the empty one — `0 − 0 = 0`
 reconciles. Invariants 17–18 and every row count in the Shape section below (eight categories, ten
 vendors, sixteen applications, six log sources, nine departments) are **conventions of a mature
 workspace**, not arithmetic: they describe how much a fully-connected customer has, and a workspace
@@ -211,6 +214,28 @@ a share of spend recovered per effort tier — the same shape as `committedRatio
 `opps[].spend >= opps[].s` always (invariant 20) — the recovery share is always
 below 1, so a saving can never exceed the spend it came from.
 
+## `cloud.providers[].services`
+
+The nested donut on the Overview's Spend Mix tile (Cloud Provider tab) shows each
+provider's own Compute/Database/Storage/… split, one concentric ring per provider.
+`cloud.services` never carried this — it is one aggregate breakdown across ALL
+providers at once, so it cannot tell you how much of AWS specifically is Compute
+versus how much of Azure is. Nothing in the dataset ever measured that split, so
+`scratchpad/gen-cloud-services.js` generates it: each named provider (`AWS`,
+`Microsoft Azure`, `Google Cloud`) has an authored, realistic-looking weight
+profile — AWS compute-heavy, Azure database-heavy from its SQL heritage, Google
+Cloud AI/data-heavy — applied to that provider's own already-authored `v`. The
+same shape as `committedRatio` in `gen-monthly.js`: an authored constant driving a
+generated, reconciling figure, not a hand-typed one.
+
+`sum(providers[].services[].v)` == `providers[].v` for every provider that carries
+the field (invariant 21) — a provider whose name has no authored profile, or a
+service share that rounds to zero, is simply left out of its own list rather than
+printed as a $0K ring segment (the same "absent, not zero-valued" rule the rest of
+the schema follows). `zero` has no providers to split, so it carries no field at
+all; `fresh`'s two providers split across all 8 service keys same as a mature
+workspace, just at a fraction of the size.
+
 ## Shape
 
 ```jsonc
@@ -268,8 +293,12 @@ below 1, so a saving can never exceed the spend it came from.
 
   "cloud": {
     "total": 645,
-    "providers": [ { "k":"AWS","v":297,"m":[24,25,26,27,25,28,26,29,27,30,30,null] } ],
-    "services":  [ { "k":"Compute","v":214 } ],   // 8 entries
+    // services: this provider's OWN Compute/Database/… split, generated —
+    // see "cloud.providers[].services" below. Absent on a provider with no
+    // authored profile; never a $0 entry.
+    "providers": [ { "k":"AWS","v":297,"m":[24,25,26,27,25,28,26,29,27,30,30,null],
+                     "services":[{ "k":"Compute","v":123 }] } ],
+    "services":  [ { "k":"Compute","v":214 } ],   // 8 entries, aggregate across ALL providers
     "envs":      [ { "k":"Production","v":402 } ], // 5 entries
     "coverage": 58, "coverageTarget": 85
   },

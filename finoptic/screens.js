@@ -126,25 +126,53 @@ S.overview = () => {
     foot:'Above the expected run rate',
     spark:M.anomalyImpact,sparkOpts:{cumulative:true}})}
 
+  ${/* 8 + 4, not 7 + 5, AND the trend is drawn taller than lineChart's default.
+        Both are the same fix for the same thing.  A grid row squares off at its
+        tallest card, and the Spend Mix card is now the tall one by a long way —
+        a 340px plot has to clear a 104px hole and two rings, and then the legend
+        sits under it — so at 7+5 the trend chart was left with 189px of void
+        beneath it.  A fixed-aspect SVG cannot grow into slack: the only two
+        levers are its own height and how much WIDTH it is given (width sets
+        height through the aspect).  Pulling a column across does both at once,
+        and the mix plot loses nothing by it, since it is capped at 340px wide
+        and was never using the fifth column.  This is the fault lineChart's own
+        header comment describes — read that before changing either number. */''}
   ${card({span:8,title:'Technology Spend Trend',sub:'Actual against the phased plan, with the year-end projection',ic:'trendup',body:lineChart([
     {name:'Actual',values:D.trend.actual,color:'--c1',dots:true,area:true},
     {name:'Budget',values:D.trend.budget,color:NEUTRAL},
     {name:'Forecast',values:D.trend.forecast,color:'--c3',dash:true}
-  ],D.meta.months),note:D.insights&&D.insights.overview?D.insights.overview.trendNote||'The gap between the line and the plan is the whole story of this year.':''})}
+  ],D.meta.months,{h:272}),note:D.insights&&D.insights.overview?D.insights.overview.trendNote||'The gap between the line and the plan is the whole story of this year.':''})}
 
+  ${/* Round 20: Cloud Provider leads and is the default — swapped from Category,
+        which used to be first.  Round 21 then rebuilt the Provider pane three
+        times; the argument is recorded above pieRing() in charts.js and is worth
+        reading before touching this, because two of the three steps reversed the
+        step before them.  What survived: the plot is a two-ring donut about a
+        hole holding the total, it is ~3x the diameter it was, and NOTHING is
+        labelled on it.
+        BOTH panes have their legend back — round 20 had replaced it with labels
+        drawn on the plot, which crowded it ("show labels only on hover.  Restore
+        the legend we initially removed, limiting it to the primary three
+        providers").  So the legend names the three providers and the ~24 service
+        bands are named by their hover readout alone.
+        Both totals are summed from the SAME array the plot is handed, not read
+        off D.cloud.total or D.ytdActual, so the legend's percentages cannot
+        disagree with the slice they sit beside under a partial filter. */''}
   ${card({span:4,title:'Spend Mix',ic:'tag',
-    tabs:[['category','Category'],['provider','Cloud Provider']],
+    tabs:[['provider','Cloud Provider'],['category','Category']],
     body:tabPanes([
-      ['category',donut(D.categories,{label:'YTD total'})+legend(D.categories,D.ytdActual)],
-      ['provider',donut(D.cloud.providers,{label:'Cloud YTD'})+legend(D.cloud.providers,D.cloud.total)]
+      ['provider',pieRing(D.cloud.providers,{label:'Cloud YTD'})
+        + legend(D.cloud.providers, sumV(D.cloud.providers))],
+      ['category',donut(D.categories,{label:'YTD total',size:300})
+        + legend(D.categories, sumV(D.categories))]
     ])})}
 
-  ${card({span:4,title:'Spend By Vendor',sub:'Top 8, with the tail rolled up',ic:'proc',body:hbars(provs,{noun:'vendors'}),pad:false})}
-  ${card({span:4,title:'Spend By Product',sub:'Including allocated shared cost',ic:'product',body:hbars(prods,{noun:'products'}),pad:false})}
+  ${card({span:4,title:'Top Spend By Vendor',sub:'Top 8, with the tail rolled up',ic:'proc',body:hbars(provs,{noun:'vendors'}),pad:false})}
+  ${card({span:4,title:'Top Spend By Product',sub:'Including allocated shared cost',ic:'product',body:hbars(prods,{noun:'products'}),pad:false})}
   ${/* The sub-line is a figure, so it obeys the same rule the tiles and the
         strip do: on a workspace that has closed nothing there is no total to
         state, and "$0K identified" would be the last zero left standing. */''}
-  ${card({span:4,title:'Savings By Source',sub:workspaceEmpty()?'':money(D.identified)+' identified',ic:'savings',tone:'pos',body:hbars(D.savingsByCat,{noun:'sources'}),pad:false})}
+  ${card({span:4,title:'Top Savings By Source',sub:workspaceEmpty()?'':money(D.identified)+' identified',ic:'savings',tone:'pos',body:hbars(D.savingsByCat,{noun:'sources'}),pad:false})}
 
   ${/* order:'keep' -- the underlying opps[] rows are already authored descending
         by `s`, which is what "ranked by annual value" promises.  Adding a Spend
@@ -423,10 +451,40 @@ S.ai = () => {
     foot:'Seat and model consolidation',
     spark:(D.monthly||{}).aiSavings})}
 
-  ${card({span:8,title:'AI Spend Trend',hint:'Subscription vs consumption',body:stackedBars(mo,[
-    {name:'Subscriptions (seats)',values:[9,9,10,11,11,12,12,13,13,17,17],color:'--c3'},
-    {name:'API / tokens',values:[4,5,5,6,5,7,6,8,7,15,16],color:'--c1'}
-  ]),note:'Seat cost grows in steps as licences are bought. Token cost grows continuously — and doubled in May when Gamma\'s pipeline went live.'})}
+  ${/* DERIVED FROM D.ai, not authored.  Both series were literal arrays —
+        [9,9,10,11,11,12,12,13,13,17,17] and [4,5,5,6,5,7,6,8,7,15,16] — which
+        made this the last chart in the product that could not answer a filter or
+        a dataset: eleven fixed months, so it drew the same year under every
+        scenario and kept its full axis while a Date Range of Jan-Apr narrowed
+        every other plot on the screen.  Round 14 deleted the rest of the
+        hardcoded figures for being unprovable; this one survived because it is
+        the only one that is a SERIES rather than a number.
+        `a.m` is the AI monthly spend and deriveView() masks it, so the axis now
+        trims with the selection.  The seats/tokens split is the dataset's own
+        `sub`/`api` ratio applied to each month — the schema holds that split for
+        the year but not per month, so the proportion is held and the dollars
+        move, exactly as the cloud service ring does (charts.js, pieRing).  The
+        remainder is taken rather than computed twice, so the two bands always
+        sum to the month they came from. */''}
+  ${(()=>{
+    const subShare = a.total ? a.sub/a.total : 0;
+    const aiSub = (a.m||[]).map(v=> v==null?null:Math.round(v*subShare));
+    const aiApi = (a.m||[]).map((v,i)=> v==null?null:v-aiSub[i]);
+    return card({span:8,title:'AI Spend Trend',hint:'Subscription vs consumption',
+      body:stackedBars(D.meta.months,[
+        {name:'Subscriptions (seats)',values:aiSub,color:'--c3'},
+        {name:'API / tokens',values:aiApi,color:'--c1'}
+      ]),
+      /* The old note claimed token cost "doubled in May when Gamma's pipeline
+         went live" — a sentence about numbers that were invented, and false the
+         moment the split became a held ratio.  What is left is the structural
+         fact, which is true in every scenario, plus the one figure the data does
+         support. */
+      note:a.total
+        ? 'Seats are committed cost and tokens are usage, so the two answer to different levers — '
+          +share(a.sub,a.total)+' of the spend shown is seats.'
+        : ''});
+  })()}
   ${card({span:4,title:'Spend By Provider',body:donut(a.providers,{label:'AI YTD'})+legend(a.providers,a.total)})}
 
   ${card({span:5,title:'Token Economics',pad:false,body:table(
@@ -1239,7 +1297,7 @@ S.anomalies = () => {
   ${card({span:12,title:'Detected Anomalies',
     sub:'Most severe first, then by the size of the miss. Open one for the cause, the owner and what happens next.',pad:false,
     body:A.length ? anomCols()+rowList(A.map(anomalyRow),'anomalies')
-      : emptyState('No Anomalies Match These Filters','Widen the period, or clear a filter in the row above. Nothing detected is not the same as nothing spent.'),
+      : emptyState('No Anomalies Match These Filters','Widen the date range, or clear a filter in the row above. Nothing detected is not the same as nothing spent.'),
     note:worst?`<b>${worst.svc} on ${worst.prod}</b> is the largest single gap — <b>${moneyK(worst.act-worst.exp)}</b> above expectation in one month, ${worst.st.toLowerCase()} with <b>${worst.owner}</b>.`
       :'Nothing in this slice moved far enough from its expected value to be flagged.'})}
 

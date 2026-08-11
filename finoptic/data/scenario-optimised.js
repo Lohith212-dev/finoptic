@@ -413,6 +413,40 @@ FINOPTIC.scenario(
           22,
           22,
           null
+        ],
+        "services": [
+          {
+            "k": "Compute",
+            "v": 111
+          },
+          {
+            "k": "Database",
+            "v": 31
+          },
+          {
+            "k": "Storage",
+            "v": 37
+          },
+          {
+            "k": "Kubernetes",
+            "v": 34
+          },
+          {
+            "k": "Networking",
+            "v": 21
+          },
+          {
+            "k": "Serverless",
+            "v": 10
+          },
+          {
+            "k": "AI services",
+            "v": 13
+          },
+          {
+            "k": "Monitoring",
+            "v": 5
+          }
         ]
       },
       {
@@ -431,6 +465,40 @@ FINOPTIC.scenario(
           15,
           15,
           null
+        ],
+        "services": [
+          {
+            "k": "Compute",
+            "v": 52
+          },
+          {
+            "k": "Database",
+            "v": 45
+          },
+          {
+            "k": "Storage",
+            "v": 30
+          },
+          {
+            "k": "Kubernetes",
+            "v": 15
+          },
+          {
+            "k": "Networking",
+            "v": 19
+          },
+          {
+            "k": "Serverless",
+            "v": 6
+          },
+          {
+            "k": "AI services",
+            "v": 15
+          },
+          {
+            "k": "Monitoring",
+            "v": 6
+          }
         ]
       },
       {
@@ -449,6 +517,40 @@ FINOPTIC.scenario(
           8,
           8,
           null
+        ],
+        "services": [
+          {
+            "k": "Compute",
+            "v": 24
+          },
+          {
+            "k": "Database",
+            "v": 14
+          },
+          {
+            "k": "Storage",
+            "v": 14
+          },
+          {
+            "k": "Kubernetes",
+            "v": 8
+          },
+          {
+            "k": "Networking",
+            "v": 8
+          },
+          {
+            "k": "Serverless",
+            "v": 4
+          },
+          {
+            "k": "AI services",
+            "v": 24
+          },
+          {
+            "k": "Monitoring",
+            "v": 2
+          }
         ]
       }
     ],

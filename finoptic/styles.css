@@ -50,6 +50,14 @@
   /* ---- typography (§1) --------------------------------------------------- */
   --sans:'Mona Sans',-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --metric:'Space Grotesk','Mona Sans',-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  /* THE WORDMARK'S OWN FACE, and the only thing it is allowed to set.  §1 still
+     admits exactly two typefaces and v3.9 deleted a third one that had crept
+     into the UI — this is not that.  There is no vector artwork for the
+     "Technomics" letterforms (logo.js), so the wordmark is real text, and the
+     face it is drawn in is the face the name was designed in: Bricolage
+     Grotesque.  It is a LOGO, scoped to `.brand-word`; nothing else in the
+     product may reference this token, or it becomes the third typeface. */
+  --wordmark:'Bricolage Grotesque',var(--metric);
 
   /* ---- neutrals (§2) ----------------------------------------------------- */
   /* WARM greys, not cool ones, and light.  The canvas was a blue-grey
@@ -303,11 +311,24 @@ h1,h2,h3,h4,h5,h6{font-weight:700; letter-spacing:-.015em; line-height:1.18; mar
 .brand-mark{flex:0 0 auto}
 .brand-mark-only{display:block; height:29px; width:29px}
 .brand-mark-only .lw-accent{fill:var(--accent)}
-/* Height, not width: the wordmark is cropped to its own ink, so a fixed height
-   sets the cap height and the width follows. */
-.brand-word{display:block; height:13px; width:auto; min-width:0}
-.brand-word .lw-ink{fill:var(--ink)}
-.brand-word .lw-accent{fill:var(--accent)}
+/* The wordmark is real text now (logo.js — no source artwork for
+   "Technomics"), so it sizes by font-size rather than by the fixed height a
+   cropped SVG used to set. `.lw-ink`/`.lw-accent` are kept as the two span
+   classes; `color` sits beside the `fill` these rules already carried for the
+   mark's own SVG paths, so one pair of class names serves both.
+
+   Set in BRICOLAGE GROTESQUE (--wordmark) — the face the name was designed
+   in, and the one place in the product that token may appear.  It is a wider,
+   higher-contrast grotesque than Space Grotesk, so it needs a touch less
+   negative tracking than the 15px wordmark carried before or the "Tech"/
+   "nomics" seam tightens into a ligature. */
+.brand-word{
+  display:block; width:auto; min-width:0; white-space:nowrap;
+  font-family:var(--wordmark); font-weight:800; letter-spacing:-.005em; line-height:1;
+  font-size:20px;
+}
+.brand-word .lw-ink{fill:var(--ink); color:var(--ink)}
+.brand-word .lw-accent{fill:var(--accent); color:var(--accent)}
 .brand-sub{color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* Icon button — the sidebar's and top bar's chrome control. */
@@ -568,6 +589,80 @@ h1,h2,h3,h4,h5,h6{font-weight:700; letter-spacing:-.015em; line-height:1.18; mar
 .menu-opt.on{color:var(--accent-strong); font-weight:600; background:var(--accent-bg)}
 .menu-opt i{width:9px; height:9px; border-radius:2px; flex:0 0 9px; background:var(--g6)}
 .menu-opt .cnt{margin-left:auto; color:var(--ink-4); font-size:11px}
+/* A month past the dataset's own closed window — same treatment as a disabled
+   calendar day (.cal-d[disabled]): present, but plainly not a real choice. */
+.menu-opt[disabled]{color:var(--ink-4); opacity:.5; cursor:default}
+.menu-opt[disabled]:hover{background:none}
+/* ---- THE DATE RANGE PICKER (§7) — a 4x3 month grid, not a list ----
+   The one filter menu that is not a column of alternatives, because its two
+   clicks do not mean what one click means anywhere else in the bar.  See the
+   note above periodMenuHTML() in shell.js for why the list it replaced could
+   not be fixed by relabelling it. */
+/* A FIXED width, not a min-width, and no scroll.  `.menu.vals` sizes itself to
+   its content and caps at 320px tall with overflow-y:auto, which suits a list of
+   unknown length — this menu is neither.  Left to shrink-to-fit, the hint
+   sentence set the width and the menu opened ~640px wide with four enormous
+   month cells in it; left to the 320px cap, the grid pushed "Custom range…"
+   under a scrollbar.  The content here is a known size, so it is stated. */
+.menu.vals.periodmenu{width:268px; min-width:0; max-height:none; overflow:visible}
+/* The Start -> End readout.  This is the part that says "two selections": the
+   field awaiting the next click is outlined in accent, so the second pick is
+   something the reader is visibly in the middle of rather than something they
+   have to know about in advance. */
+.mo-head{display:flex; align-items:stretch; gap:6px; padding:1px 1px 7px}
+.mo-fld{
+  flex:1 1 0; min-width:0; padding:5px 8px 6px;
+  border:1px solid var(--line); border-radius:var(--r-control);
+  background:var(--surface-2);
+}
+.mo-fld .mo-lbl{
+  display:block; font-size:9px; font-weight:600; letter-spacing:.04em;
+  text-transform:none; color:var(--ink-4);
+}
+.mo-fld b{
+  display:block; font-size:12px; font-weight:600; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.mo-fld.mo-none b{color:var(--ink-4); font-weight:500}
+.mo-fld.mo-now{border-color:var(--accent); background:var(--accent-bg)}
+.mo-fld.mo-now .mo-lbl,.mo-fld.mo-now b{color:var(--accent-strong)}
+.mo-arrow{align-self:center; color:var(--ink-4); font-size:11px; padding-top:7px}
+.mo-hint{padding:0 2px 8px; font-size:10.5px; font-weight:500; color:var(--ink-3); line-height:1.35}
+/* NO column gap, deliberately: the pale in-range cells have to touch for the
+   span to read as one bar rather than as four separate pills. */
+.mo-grid{display:grid; grid-template-columns:repeat(4,1fr); row-gap:4px}
+.mo{
+  padding:8px 0; border:0; background:none; cursor:pointer; text-align:center;
+  font-size:12px; font-weight:600; color:var(--ink-2);
+  border-radius:var(--r-chip);
+}
+.mo:hover:not([disabled]):not(.on):not(.in){background:var(--surface-2); color:var(--ink)}
+/* A month INSIDE the span — pale, and quieter than the ends, because the ends are
+   what the reader chose and the middle is what followed from it.  Square where the
+   run continues into the next cell, rounded where it stops (`rl`/`rr` are set in
+   shell.js, per row, since a span that wraps the fiscal year is two blocks). */
+.mo.in{background:var(--accent-bg); color:var(--accent-strong); border-radius:0}
+.mo.in.rl{border-top-left-radius:var(--r-chip); border-bottom-left-radius:var(--r-chip)}
+.mo.in.rr{border-top-right-radius:var(--r-chip); border-bottom-right-radius:var(--r-chip)}
+/* The two ends, filled solid.  The period pill is already the one accent-tinted
+   filter (§7), so its own menu is the one place a solid accent fill is in budget
+   — it marks the selection of the control the whole board follows. */
+.mo.on{background:var(--accent); color:#fff}
+.mo[disabled]{color:var(--ink-4); opacity:.42; cursor:default}
+/* Why the grey cells are grey (shell.js, unclosedNote).  Quiet — it explains a
+   disabled control, it is not an instruction. */
+.mo-note{padding:7px 2px 0; font-size:10px; font-weight:500; color:var(--ink-4)}
+/* The HOVER PREVIEW deliberately has no styling of its own.  Between an anchor
+   and the month under the pointer the band is drawn with the same .on/.in classes
+   a completed range uses, because that is the point of it: it shows what the
+   second click will produce.  Every picker the research looked at does the same —
+   react-aria has one `highlightedRange` and does not distinguish the two. */
+/* Announced but not drawn: the range is communicated by fill across twelve cells,
+   which reaches no screen reader (shell.js, periodPaint). */
+.sr-only{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+}
 
 /* Mini icon-rail (§8) — the collapse chevron's destination.
    ONE icon per GROUP, not per item.  Seventeen icons in a 76px column read as
@@ -949,15 +1044,19 @@ html[data-stuck] .ledger{
   position:sticky; top:var(--controls-h); z-index:12;
   display:flex; align-items:center; gap:0; margin:0 0 var(--grid-gap);
   padding:12px 10px 13px 24px;
-  /* A pale wash of the accent, left to right, fading out well before the stats.
-     The strip is the one thing on the page that is on EVERY page, and on a plain
-     white surface it read as just another card.  The wash tells you it is the
-     product's own ledger rather than one of the screen's panels, and it does it
-     without spending a real accent moment — the hero KPI still owns that. */
+  /* A pale wash of the accent, left to right.  The strip is the one thing on
+     the page that is on EVERY page, and on a plain white surface it read as
+     just another card.  The wash tells you it is the product's own ledger
+     rather than one of the screen's panels, and it does it without spending a
+     real accent moment — the hero KPI still owns that.
+     A second stop sits at the MIDPOINT — exactly where the secondary three
+     lanes begin — because the old two-stop fade was nearly white by 66% and
+     had already washed out before the secondary half even started, undercutting
+     the six-equal-lanes point the strip exists to make. */
   background:linear-gradient(101deg,
     color-mix(in srgb,var(--accent) 13%,#fff) 0%,
-    color-mix(in srgb,var(--accent) 5%,#fff) 34%,
-    var(--surface) 66%);
+    color-mix(in srgb,var(--accent) 8%,#fff) 50%,
+    var(--surface) 100%);
   border-radius:var(--r-surface);
   box-shadow:var(--shadow-1);
 }
@@ -2286,7 +2385,17 @@ svg{display:block; max-width:100%}
    already.  Hovering promotes it by stepping the rest back, which is the
    references' "promote one thing per view" applied to a moment rather than to
    a layout (DNA 5). */
+/* Visible, not hidden: a callout's leader + label live just outside the ring
+   but still inside the svg's own viewBox margin (charts.js ringLabels) — this
+   only matters for the rare label that runs slightly wide of its own edge. */
+.ct-donut{overflow:visible}
 .ct-slice{cursor:default; transition:opacity .13s ease}
+/* Round 20 drew name-and-figure callouts on the ring in place of a legend, and
+   round 21 removed them and their CSS with them — see the note above pieRing()
+   in charts.js for why labels on the plot cannot coexist with two rings.  The
+   legend does the naming again (.legend.rows, above) and CHARTTIP does the rest.
+   The `ct-piering` class exists so the two-ring donut can be selected apart from
+   the one-ring one; it needs no rules of its own. */
 /* :has(), not :hover on the <svg> — the ring has a hole in the middle, and the
    svg's own box covers it, so `.ct-donut:hover .ct-slice` dimmed all eight
    slices with nothing promoted the moment the pointer crossed the centre total.
@@ -2409,9 +2518,7 @@ svg{display:block; max-width:100%}
 .signin-brand-c{min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:3px}
 .signin-brand .brand-mark-only{flex:0 0 30px; height:30px; width:30px}
 .signin-brand .brand-mark-only .lw-accent{fill:var(--accent)}
-.signin-brand .brand-word{height:14px; width:auto}
-.signin-brand .brand-word .lw-ink{fill:var(--ink)}
-.signin-brand .brand-word .lw-accent{fill:var(--accent)}
+.signin-brand .brand-word{font-size:22px}
 
 .signin-mid{flex:1; display:flex; align-items:center; justify-content:center; padding:30px 0}
 .signin-box{width:100%; max-width:406px}
@@ -2784,7 +2891,7 @@ html[data-ledger="min"] .ledger.fresh .ledger-v.dash{font-size:14px}
   margin-top:-4vh;
 }
 .fx-boot .brand-mark-only{height:74px; width:74px}
-.fx-boot .brand-word{height:26px}
+.fx-boot .brand-word{font-size:40px}
 .fx-boot-word{display:flex}
 .fx-boot-sub{
   font-size:10.5px; font-weight:500; color:var(--ink-3); letter-spacing:.01em;

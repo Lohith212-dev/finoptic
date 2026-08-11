@@ -78,8 +78,15 @@ const DS=['baseline','ai-crisis','optimised','scaleup','fresh','zero'];
           /* CHARTTIP.attrs() writes ONE data-ct holding the whole payload as JSON —
              there is no data-ct-t.  Reading a non-existent attribute gave an array
              of nulls, which never equals the legend's names, so every donut on
-             every screen "failed". */
-          const slices=[...dn.querySelectorAll('.ct-slice')].map(s=>{
+             every screen "failed".
+             `.ct-key` FIRST, `.ct-slice` as the fallback.  The two-ring donut
+             (charts.js pieRing) draws a provider ring the legend keys to AND a
+             service ring it does not — 27 paths, all of them .ct-slice — so the
+             plain selector read a 3-row legend against 27 slices and failed a
+             chart that was correctly ordered.  Marking the keyed ring keeps this
+             check honest on both shapes instead of having to exempt one. */
+          const keyed=dn.querySelectorAll('.ct-key');
+          const slices=[...(keyed.length?keyed:dn.querySelectorAll('.ct-slice'))].map(s=>{
             try{ return JSON.parse(s.getAttribute('data-ct')).t; }catch(e){ return null; } });
           const keys=[...lg.querySelectorAll('.lg-n')].map(txt);
           const vals=[...lg.querySelectorAll('div > b:first-of-type')].map(e=>num(txt(e)));

@@ -39,6 +39,12 @@
 let RAW = null, D = null;
 
 const sum = a => a.reduce((x,y)=>(x||0)+(y||0),0);
+/* The same, over a list of {k,v} rows — the shape every share chart and legend
+   is handed.  It exists so a legend's percentages are taken against the total
+   of the ARRAY IT WAS GIVEN rather than against a stored headline total: under a
+   partial filter the two are different numbers, and the one the reader can
+   check by adding up the rows in front of them is the array's own. */
+const sumV = a => (a||[]).reduce((x,r)=>x+(r&&r.v||0),0);
 const clone = o => JSON.parse(JSON.stringify(o));
 
 /* ---------- formatting ---------- */
@@ -117,18 +123,86 @@ function renewalPriority(days,v,total){
       presenting a scaled number as a measured one.
    ============================================================ */
 
-/* Month index sets. Index 11 (July) is forecast in every scenario, so no
-   period includes it. */
+/* Month index sets — one per REAL calendar month, in normal Jan-Dec order,
+   each mapped to the fiscal-year slot it actually lives in.  The dataset's
+   own month array is fixed as Aug..Jul (meta.months, every scenario) — index
+   0 is August — so the mapping below is arithmetic on that, not a guess:
+   January is fiscal index 5, August wraps back to fiscal index 0. Index 11
+   (July) is forecast in every scenario, so a single "July" pick still shows
+   nothing until a workspace forecasts to March or later. */
 const PERIODS = [
-  ['Full year · Aug–Jun', [0,1,2,3,4,5,6,7,8,9,10]],
-  ['H1 · Aug–Jan',        [0,1,2,3,4,5]],
-  ['H2 · Feb–Jun',        [6,7,8,9,10]],
-  ['Last quarter · Apr–Jun',[8,9,10]],
-  ['Last month · Jun',    [10]]
+  ['January',[5]], ['February',[6]], ['March',[7]], ['April',[8]],
+  ['May',[9]],     ['June',[10]],    ['July',[11]], ['August',[0]],
+  ['September',[1]],['October',[2]],['November',[3]],['December',[4]]
 ];
+/* The standing "whole year" span used as the default and by ytdView() — NOT
+   a PERIODS entry, because the preset list is exactly the twelve individual
+   months plus Custom range and nothing else now.  Kept as its own sentinel
+   rather than reusing PERIODS[0] (which is just "January" and would make
+   every YTD figure in the product a one-month figure) or CUSTOM_PERIOD
+   (which requires a F.range object custom range never had to construct). */
+const FULL_YEAR_PERIOD = 'Full year';
+const fullYearMonths = () => Array.from({length:closedCount()}, (_,i)=>i);
+const monthSpanLabel = ms => {
+  if(!ms.length) return '—';
+  const M = RAW.meta.months;
+  return ms.length===1 ? M[ms[0]] : M[ms[0]]+'–'+M[ms[ms.length-1]];
+};
+
+/* ---- A RANGE OF MONTHS, picked from the month list itself (§7) ----
+   "How can I select a range of months, which I explicitly requested as an
+   affordance?"  Click a month, click a second, and the span between them is the
+   period — see the click handler in shell.js.  `F.span` holds two indexes INTO
+   PERIODS (two rows of the list as displayed), resolved here into the months
+   they actually name.
+
+   A SPAN IS A CONTIGUOUS RUN ALONG THE DATASET'S OWN TIMELINE, and that is not
+   the same thing as a contiguous run down the list.  The list runs Jan–Dec (as
+   asked) while every dataset holds ONE fiscal year, Aug–Jul, so the two orders
+   disagree and the disagreement is not cosmetic.  Take March to October.  Read
+   down the list that is eight rows, Mar…Oct — but the dataset has no Aug, Sep or
+   Oct after its March: those three months are at the START of the fiscal year,
+   eleven months EARLIER.  Resolving in list order therefore returns a set with a
+   hole in it (Aug, Sep, Oct, then Mar…Jun), and that set is wrong twice over:
+   it is not what "March to October" means, and lineChart() draws a smooth line
+   straight across the months it left out — inventing four months of spend that
+   the filter had specifically excluded.  A first version of this shipped exactly
+   that and the trend chart drew an unbroken year for a seven-month selection.
+   So the two picks are resolved to fiscal indexes and the run between them is
+   the period: March-to-October is Oct→Mar, six real consecutive months, which is
+   the only reading the data can honestly answer.  In the Jan–Dec list a span
+   that wraps the fiscal year highlights as two blocks (Oct-Dec and Jan-Mar), and
+   that is correct rather than broken — those are the months in the selection,
+   and the pill and the page heading both name the span as Oct–Mar.
+
+   Unclosed months are dropped on resolution rather than refused on click: an
+   endpoint cannot be an unclosed month (those rows are disabled), but one can
+   fall INSIDE a span, and a forecast month quietly inside an "actual" total is
+   the one thing the reconciliation guard exists to prevent. */
+const MONTH_RANGE = 'Month range';
+/* The two picks as FISCAL month indexes, low first — the dataset's own order. */
+const spanEnds = s => {
+  const a = PERIODS[s.from][1][0], b = PERIODS[s.to][1][0];
+  return [Math.min(a,b), Math.max(a,b)];
+};
+function spanMonths(s){
+  if(!s) return fullYearMonths();
+  const [lo,hi] = spanEnds(s), out = [];
+  for(let i=lo;i<=hi;i++) if(i < closedCount()) out.push(i);
+  return out.length ? out : fullYearMonths();
+}
+/* Named from the months it RESOLVED to, via the same helper the full-year pill
+   uses, so the pill can never claim a span the figures under it were not
+   computed from. */
+const spanLabel = s => s ? monthSpanLabel(spanMonths(s)) : 'Range';
+/* Fiscal month index -> its full calendar name, for the Start/End readout above
+   the month grid.  Built from PERIODS rather than written out again, so the two
+   can never disagree about which fiscal slot January lives in. */
+const FY_MONTH_NAME = {};
+PERIODS.forEach(p => { FY_MONTH_NAME[p[1][0]] = p[0]; });
 
 const DIMS = {
-  period:  {label:'Period',      icon:'calendar', vals:()=>PERIODS.map(p=>p[0])},
+  period:  {label:'Date Range',  icon:'calendar', vals:()=>PERIODS.map(p=>p[0])},
   category:{label:'Category',    icon:'tag',      vals:()=>RAW.categories.map(c=>c.k)},
   product: {label:'Product',     icon:'product',  vals:()=>RAW.products.map(p=>p.k)},
   provider:{label:'Provider',    icon:'cloud',    vals:()=>RAW.cloud.providers.map(p=>p.k)},
@@ -187,7 +261,10 @@ const NO_FILTER_NOTE = {
    and two disjoint periods summed into one figure would be a different product —
    but it gains a custom range instead (see CUSTOM_PERIOD below). */
 const MULTI = ['category','product','provider','env','vendor'];
-const F = {period:PERIODS[0][0], range:null, category:[], product:[], provider:[], env:[], vendor:[]};
+/* `range` is CUSTOM_PERIOD's two dates; `span` is MONTH_RANGE's two list
+   positions.  Only one of the three period shapes is ever live at a time, and
+   whichever it is, F.period names it. */
+const F = {period:FULL_YEAR_PERIOD, range:null, span:null, category:[], product:[], provider:[], env:[], vendor:[]};
 const sel  = d => F[d] || [];
 const has  = d => sel(d).length > 0;
 /* "Everything except the one thing I picked" is a real question, so a selection
@@ -236,16 +313,20 @@ const workspaceEmpty = src => closedCount(src) === 0;
    daily curve — and inventing one on a screen whose entire claim is
    reconciliation would be the worst kind of polish. */
 function rangeMonths(r){
-  if(!r || !r.from || !r.to) return PERIODS[0][1];
+  if(!r || !r.from || !r.to) return fullYearMonths();
   const from = new Date(r.from+'T00:00:00'), to = new Date(r.to+'T00:00:00');
   const out = [];
   for(let i=0;i<closedCount();i++)
     if(fyMonthStart(i) <= to && fyMonthEnd(i) >= from) out.push(i);
-  return out.length ? out : PERIODS[0][1];
+  return out.length ? out : fullYearMonths();
 }
-const monthsOf = label => label===CUSTOM_PERIOD
-  ? rangeMonths(F.range)
-  : (PERIODS.find(p=>p[0]===label) || PERIODS[0])[1];
+const monthsOf = label => {
+  if(label===CUSTOM_PERIOD) return rangeMonths(F.range);
+  if(label===MONTH_RANGE) return spanMonths(F.span);
+  if(label===FULL_YEAR_PERIOD) return fullYearMonths();
+  const hit = PERIODS.find(p=>p[0]===label);
+  return hit ? hit[1] : fullYearMonths();
+};
 
 const activeDims = () => (SCREEN_DIMS[current]||[]).filter(d=>DIMS[d]);
 /* Only filters the current screen can honour count as "on" — a Vendor filter
@@ -506,7 +587,7 @@ function deriveView(){
    needs without another render depending on the order calls happen in. */
 function ytdView(){
   const p = F.period, r = F.range;
-  F.period = PERIODS[0][0]; F.range = null;
+  F.period = FULL_YEAR_PERIOD; F.range = null;
   const V = deriveView();
   F.period = p; F.range = r;
   return V;

@@ -63,7 +63,7 @@ function stateFixes(){
   const live = typeof liveFilters==='function' ? liveFilters() : [];
   if(live.length)
     acts.push({t:'Clear '+live.length+' filter'+(live.length===1?'':'s'), act:'clear'});
-  if(typeof F!=='undefined' && typeof PERIODS!=='undefined' && F.period!==PERIODS[0][0])
+  if(typeof F!=='undefined' && typeof FULL_YEAR_PERIOD!=='undefined' && F.period!==FULL_YEAR_PERIOD)
     acts.push({t:'Widen to the full year', act:'period'});
   return acts;
 }
@@ -178,7 +178,7 @@ const ONB_STEPS = [
         'Save it as CSV with a month column in any date format, and a figure column in whole currency.',
         'Load it from Add a record \u2192 Budget line, or hand the file to whoever holds the workspace.',
         'Check the reconciliation strip: spend \u2212 budget = variance should stop showing an em dash on every screen.',
-        'Re-send it whenever the plan is re-cut. Finoptic keeps every version and reports against the current one.'],
+        'Re-send it whenever the plan is re-cut. Technomics keeps every version and reports against the current one.'],
    role:'Finance'},
 
   {n:3, k:'Products and tags',
@@ -361,7 +361,7 @@ const ONB_VIDEO = 'Y-c_xw9bHFw';
 const onbEmbed = () =>
   `<iframe class="onb-embed" src="https://www.youtube-nocookie.com/embed/${ONB_VIDEO}`
   + `?autoplay=1&rel=0&modestbranding=1&playsinline=1"`
-  + ` title="Finoptic — product walkthrough" frameborder="0" allowfullscreen`
+  + ` title="Technomics — product walkthrough" frameborder="0" allowfullscreen`
   + ` allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
 const ONB_POSTER = `<svg class="onb-poster" viewBox="0 0 640 360" role="img"
   aria-label="A still of the Executive Dashboard — the sidebar, the reconciliation strip, a row of figures, a spend trend and a category donut">
@@ -496,7 +496,7 @@ function onbWelcome(trigger){
         <button class="btn pri" type="button" data-onb-dismiss>Take me to the board</button>
         <button class="btn" type="button" data-onb-tour>Show me around first</button>
       </div>
-    </div>`, 'Welcome to Finoptic', trigger);
+    </div>`, 'Welcome to Technomics', trigger);
 }
 
 /* ============================================================
@@ -651,7 +651,7 @@ function connectPaneOpen(n, trigger){
    ============================================================ */
 const ONB_CHAPS = [
   {n:1, k:'See what it does',
-   lead:'Start here — what Finoptic is for, and how to find your way around. Nothing on this page needs setting up.'},
+   lead:'Start here — what Technomics is for, and how to find your way around. Nothing on this page needs setting up.'},
   {n:2, k:'Connect your data',
    lead:'Five connections, in the order a rollout actually makes them. Open one at a time: each says what it turns on, and what stays dark until it is done.'},
   {n:3, k:'See what it turns on',
@@ -727,7 +727,7 @@ function onbNav(){
    the note with it.  What is left is the thing a first-time reader actually
    needs: watch this, and here is how to move around while you do. */
 function onbChapterOne(){
-  return card({span:12, title:'What Finoptic Does',
+  return card({span:12, title:'What Technomics Does',
     sub:'Two minutes on the product, and five pointers on the screen in front of you',
     body:`<div class="onb-intro">
       ${onbFrame()}
@@ -803,7 +803,7 @@ function onbStepPanel(s){
 
 function onbChapterTwo(){
   const done = onbCount('done'), recon = onbRecon();
-  return card({span:12, title:'What Finoptic Needs, In Order',
+  return card({span:12, title:'What Technomics Needs, In Order',
     sub:'Each step is independent to do and dependent to use — a later one cannot make an earlier one true',
     pad:false,
     body:`<div class="onb-prog">${meter(done/5*100,done===5?'good':'')}
@@ -1005,7 +1005,7 @@ function freshOverview(){
       <p>Cost data has been arriving for <b>two days</b>. No month has closed and no plan has been
          loaded, so nothing on this screen can be reconciled yet.</p></div>
     <div class="brief why"><div class="brief-h"><b>Why it is happening</b></div>
-      <p>Finoptic reports closed months against an approved plan. This workspace has neither — the
+      <p>Technomics reports closed months against an approved plan. This workspace has neither — the
          first close is <b>26 days</b> away, and the budget is still with Finance.</p></div>
     <div class="brief do"><div class="brief-h"><b>What to do</b></div>
       <p>Load the budget and map product tags <b>now</b>, while the first month fills. Both are
@@ -1033,15 +1033,15 @@ function freshOverview(){
     body:STATES.empty({kind:'fresh',title:'Categories Fill On The First Close',
       body:'Categories are derived from the feeds themselves, so nothing has to be configured for this card. It needs a whole month to divide.'})})}
 
-  ${card({span:4,title:'Spend By Vendor',sub:'Top 8, with the tail rolled up',
+  ${card({span:4,title:'Top Spend By Vendor',sub:'Top 8, with the tail rolled up',
     body:STATES.empty({kind:'nosource',step:5,title:'The Vendor Register Is Not Loaded',
       body:'Billing says what was charged. It does not say which contract the charge falls under, when it renews, or who signed it — that is step 05.'})})}
 
-  ${card({span:4,title:'Spend By Product',sub:'Including allocated shared cost',
+  ${card({span:4,title:'Top Spend By Product',sub:'Including allocated shared cost',
     body:STATES.empty({kind:'detail',step:3,title:'Cost Lines Are Arriving Without A Product',
       body:'Rows are landing normally; the product tag on them is empty, so every dollar so far sits in Unallocated. Step 03 maps resource tags to products and backfills them.'})})}
 
-  ${card({span:4,title:'Savings By Source',
+  ${card({span:4,title:'Top Savings By Source',
     body:STATES.empty({kind:'fresh',title:'Nothing Has Been Compared Yet',
       body:'A saving is usage measured against what was bought. Both sides need about 30 days before the difference means anything.'})})}
 
@@ -1123,7 +1123,7 @@ document.addEventListener('click', e=>{
   if(act){
     if(act.dataset.stateAct==='clear')
       ['category','product','provider','env','vendor'].forEach(x=>F[x]=null);
-    if(act.dataset.stateAct==='period') F.period = PERIODS[0][0];
+    if(act.dataset.stateAct==='period') F.period = FULL_YEAR_PERIOD;
     refresh(); return;
   }
 
@@ -1146,7 +1146,7 @@ document.addEventListener('click', e=>{
     openModal(`<div class="mdl-video">${onbEmbed()}
       <button class="iconbtn mdl-x" type="button" data-mdl-close aria-label="Close">
         <span aria-hidden="true">&times;</span></button></div>`,
-      'Finoptic — product walkthrough', play);
+      'Technomics — product walkthrough', play);
     return;
   }
 
