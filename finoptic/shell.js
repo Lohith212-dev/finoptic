@@ -684,6 +684,25 @@ document.addEventListener('click', e=>{
   });
 });
 
+/* A card's own tabs (components.js, card({tabs:…})) — the same delegated
+   pattern as .sum-tab just above, scoped to the one card rather than the
+   document, since a board can carry more than one tabbed card at once and
+   each needs its own active key. */
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-card-tab]');
+  if(!t) return;
+  const box = t.closest('.card');
+  if(!box) return;
+  const k = t.dataset.cardTab;
+  box.setAttribute('data-active', k);
+  box.querySelectorAll('.card-tab').forEach(b=>{
+    const on = b.dataset.cardTab === k;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on);
+  });
+  box.querySelectorAll('[data-pane]').forEach(p=>{ p.hidden = p.dataset.pane !== k; });
+});
+
 function go(id,push=true){
   if(!S[id]) id='overview';
   /* Only a real navigation unfolds a group, not a re-render.  refresh() calls

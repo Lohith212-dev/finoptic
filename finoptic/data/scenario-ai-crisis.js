@@ -1353,6 +1353,7 @@ FINOPTIC.scenario(
     {
       "o": "Enable prompt caching on the Alpha reasoning agent",
       "cat": "AI",
+      "spend": 242,
       "s": 62,
       "eff": "Medium",
       "conf": "High",
@@ -1363,6 +1364,7 @@ FINOPTIC.scenario(
     {
       "o": "Route Gamma classification from GPT-5 to a mini model",
       "cat": "AI",
+      "spend": 149,
       "s": 44,
       "eff": "Medium",
       "conf": "High",
@@ -1373,6 +1375,7 @@ FINOPTIC.scenario(
     {
       "o": "Cap per-team Azure OpenAI token budgets",
       "cat": "AI",
+      "spend": 68,
       "s": 32,
       "eff": "Low",
       "conf": "High",
@@ -1383,6 +1386,7 @@ FINOPTIC.scenario(
     {
       "o": "Fix the Beta retry loop re-sending uncached embeddings",
       "cat": "AI",
+      "spend": 49,
       "s": 26,
       "eff": "Low",
       "conf": "High",
@@ -1393,6 +1397,7 @@ FINOPTIC.scenario(
     {
       "o": "Raise AWS Savings Plan coverage from 41% to 85%",
       "cat": "Cloud",
+      "spend": 42,
       "s": 22,
       "eff": "Low",
       "conf": "High",
@@ -1403,6 +1408,7 @@ FINOPTIC.scenario(
     {
       "o": "Terminate 7 idle GPU instances — Alpha inference pool",
       "cat": "Cloud",
+      "spend": 37,
       "s": 19,
       "eff": "Low",
       "conf": "High",
@@ -1413,6 +1419,7 @@ FINOPTIC.scenario(
     {
       "o": "Consolidate overlapping GenAI seats (26 employees on 3+ tools)",
       "cat": "AI",
+      "spend": 51,
       "s": 16,
       "eff": "Medium",
       "conf": "High",
@@ -1423,6 +1430,7 @@ FINOPTIC.scenario(
     {
       "o": "Move Anthropic to committed-use pricing before renewal",
       "cat": "Contract",
+      "spend": 120,
       "s": 12,
       "eff": "High",
       "conf": "Medium",
@@ -1433,6 +1441,7 @@ FINOPTIC.scenario(
     {
       "o": "Rightsize 14 oversized Azure VMs — Beta",
       "cat": "Cloud",
+      "spend": 43,
       "s": 11,
       "eff": "Medium",
       "conf": "High",
@@ -1443,6 +1452,7 @@ FINOPTIC.scenario(
     {
       "o": "Reclaim 19 inactive Microsoft 365 E5 seats",
       "cat": "Licence",
+      "spend": 17,
       "s": 8,
       "eff": "Low",
       "conf": "High",
@@ -1453,6 +1463,7 @@ FINOPTIC.scenario(
     {
       "o": "Reduce Claude Enterprise by 14 seats (48% utilised)",
       "cat": "Licence",
+      "spend": 12,
       "s": 6,
       "eff": "Low",
       "conf": "Medium",
@@ -1463,6 +1474,7 @@ FINOPTIC.scenario(
     {
       "o": "Drop the per-request model label on Gamma metrics",
       "cat": "Observability",
+      "spend": 16,
       "s": 4,
       "eff": "Medium",
       "conf": "High",
@@ -1473,6 +1485,7 @@ FINOPTIC.scenario(
     {
       "o": "Retire duplicate diagramming tools (Miro + Lucidchart)",
       "cat": "SaaS",
+      "spend": 5,
       "s": 3,
       "eff": "Low",
       "conf": "High",
@@ -1483,6 +1496,7 @@ FINOPTIC.scenario(
     {
       "o": "Cut non-production log retention from 90 to 30 days",
       "cat": "Observability",
+      "spend": 6,
       "s": 3,
       "eff": "Low",
       "conf": "High",

@@ -241,6 +241,21 @@ function personCell(name, size){
     + `</span>`;
 }
 
+/* The same name text personCell() prints, with no avatar at all — for table
+   columns that name a role rather than show a person ("Owner", "Service Owner",
+   "Owner Of The Gap", the Field/Value detail grid), where a column of repeated
+   discs was judged to add weight without adding information. Splits on the same
+   middot personCell() does, so "Sujeev · platform team" still reads as one name
+   with a qualifier rather than two. */
+function personName(name){
+  const raw = String(name == null ? '' : name).trim();
+  if(!raw) return `<span class="sub">—</span>`;
+  const [who, ...rest] = raw.split('·').map(s=>s.trim());
+  if(!isPerson(who)) return `<span class="sub">${pavAttr(raw)}</span>`;
+  return `<span class="pcell-n">${pavAttr(who)}`
+    + `${rest.length?`<span class="sub"> · ${pavAttr(rest.join(' · '))}</span>`:''}</span>`;
+}
+
 /* Avatar, name and a second line — for an account list, an invite row or a
    member picker, where the row is tall enough to carry two lines and the size
    is md or bigger. */

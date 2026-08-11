@@ -83,6 +83,7 @@ S.overview = () => {
   const provs = top.concat(tail>0
     ? [{k:'All other vendors ('+Math.max(0,(D.meta.vendors||0)-top.length)+')',v:tail,tail:true}] : []);
   const lowEff = D.opps.filter(o=>o.eff==='Low');
+  const oppSpendTotal = sum(D.opps.map(o=>o.spend));
   /* ---- round 14: four tiles, none of which restates a lane of the strip above ----
      Six of the eight tiles here WERE the strip, 200px lower and in a different unit:
      Actual, Budget, Variance, Forecast Year-End, Identified Savings and Unallocated
@@ -131,7 +132,12 @@ S.overview = () => {
     {name:'Forecast',values:D.trend.forecast,color:'--c3',dash:true}
   ],D.meta.months),note:D.insights&&D.insights.overview?D.insights.overview.trendNote||'The gap between the line and the plan is the whole story of this year.':''})}
 
-  ${card({span:4,title:'Spend By Category',ic:'tag',body:donut(D.categories,{label:'YTD total'})+legend(D.categories,D.ytdActual)})}
+  ${card({span:4,title:'Spend Mix',ic:'tag',
+    tabs:[['category','Category'],['provider','Cloud Provider']],
+    body:tabPanes([
+      ['category',donut(D.categories,{label:'YTD total'})+legend(D.categories,D.ytdActual)],
+      ['provider',donut(D.cloud.providers,{label:'Cloud YTD'})+legend(D.cloud.providers,D.cloud.total)]
+    ])})}
 
   ${card({span:4,title:'Spend By Vendor',sub:'Top 8, with the tail rolled up',ic:'proc',body:hbars(provs,{noun:'vendors'}),pad:false})}
   ${card({span:4,title:'Spend By Product',sub:'Including allocated shared cost',ic:'product',body:hbars(prods,{noun:'products'}),pad:false})}
@@ -140,10 +146,19 @@ S.overview = () => {
         state, and "$0K identified" would be the last zero left standing. */''}
   ${card({span:4,title:'Savings By Source',sub:workspaceEmpty()?'':money(D.identified)+' identified',ic:'savings',tone:'pos',body:hbars(D.savingsByCat,{noun:'sources'}),pad:false})}
 
+  ${/* order:'keep' -- the underlying opps[] rows are already authored descending
+        by `s`, which is what "ranked by annual value" promises.  Adding a Spend
+        column would otherwise steal the table's default sort: tableOrder() picks
+        the largest-total CURRENCY column, and spend is always larger than the
+        saving that comes out of it (SCHEMA.md invariant 20). */''}
   ${card({span:12,title:'Savings Opportunities',sub:'The backlog, ranked by annual value',ic:'savings',tone:'pos',pad:false,body:table(
-    [{t:'Opportunity'},{t:'Category'},{t:'Owner'},{t:'Effort'},{t:'Confidence'},{t:'Status'},{t:'Annual Saving',r:true}],
-    D.opps.slice(0,7).map(o=>[`<b>${o.o}</b>`,o.cat,personCell(o.owner),o.eff,o.conf,stBadge(o.st),moneyK(o.s)]),
-    ['Full backlog · '+D.opps.length+' opportunities','','','','','',money(D.identified)]),
+    [{t:'Service'},{t:'Category'},{t:'Service Owner'},{t:'Effort'},{t:'Confidence'},{t:'Status'},
+     {t:'Spend',r:true},{t:'Annual Saving Opportunity',r:true}],
+    D.opps.slice(0,7).map(o=>[`<b>${o.o}</b>`,o.cat,personName(o.owner),o.eff,o.conf,stBadge(o.st),
+      moneyK(o.spend),`<b>${moneyK(o.s)}</b><span class="sub"> · ${share(o.s,o.spend)}</span>`]),
+    ['Full backlog · '+D.opps.length+' opportunities','','','','','',moneyK(oppSpendTotal),
+     money(D.identified)+' · '+share(D.identified,oppSpendTotal)],
+    {order:'keep'}),
     note:lowEff.length?`<b>${lowEff.length} of ${D.opps.length}</b> are low-effort. Clearing just those returns <b>${moneyK(sum(lowEff.map(o=>o.s)))}</b> without an engineering sprint.`:''})}
 
   </div>`;
@@ -353,7 +368,7 @@ S.cloud = () => {
 
   ${card({span:12,title:'Optimisation Opportunities',sub:'The cloud line of the savings backlog',ic:'savings',tone:'pos',pad:false,body:table(
     [{t:'Opportunity'},{t:'Effort'},{t:'Confidence'},{t:'Owner'},{t:'Target Date'},{t:'Status'},{t:'Annual Saving',r:true}],
-    optRows.map(o=>[`<b>${o.o}</b>`,o.eff,o.conf,personCell(o.owner),
+    optRows.map(o=>[`<b>${o.o}</b>`,o.eff,o.conf,personName(o.owner),
       `<span class="id">${o.due}</span>`,stBadge(o.st),moneyK(o.s)]),
     optRows.length?[optRows.length+' opportunit'+(optRows.length===1?'y':'ies'),'','','','','',`<b>${moneyK(optSav)}</b>`]:null),
     note:optRows.length
@@ -452,7 +467,7 @@ S.saas = () => {
   const rows = D.saas.map(s=>{
     const u=Math.round(s.active/s.lic*100);
     return [`<div class="ent">${brandMark(s.vendor)}<div class="namecell"><b>${s.app}</b><span class="sub">${s.vendor} · ${s.cat}</span></div></div>`,
-      s.lic, s.active, utilCell(u), moneyK(s.cost), moneyK(s.cost*12), `<span class="id">${s.renew}</span>`, personCell(s.owner)];
+      s.lic, s.active, utilCell(u), moneyK(s.cost), moneyK(s.cost*12), `<span class="id">${s.renew}</span>`, personName(s.owner)];
   });
   const totLic=D.saas.reduce((a,s)=>a+s.lic,0), totAct=D.saas.reduce((a,s)=>a+s.active,0),
         totCost=D.saas.reduce((a,s)=>a+s.cost,0);
@@ -589,7 +604,7 @@ S.finance = () => {
       /* Code above name, not "CODE · Name" on one line: as a single string this
          was the widest cell in the table and it set the table's minimum width. */
       return [`<div class="namecell"><span class="id">${cc[0]}</span><span class="sub">${d.k}</span></div>`,
-        personCell(cc[1],'sm'),moneyK(d.budget),moneyK(d.v),
+        personName(cc[1]),moneyK(d.budget),moneyK(d.v),
         `<span class="delta ${vv>0?'up':vv<0?'down':'flat'}">${vv===0?'—':signed(vv)}</span>`];
     }),
     ['Total','',moneyK(sum(D.depts.map(d=>d.budget))),moneyK(sum(D.depts.map(d=>d.v))),
@@ -689,7 +704,7 @@ S.proc = () => {
   ${card({span:12,title:'Vendor Spend',hint:'Top 10',pad:false,body:table(
     [{t:'Vendor'},{t:'Category'},{t:'YTD Spend',r:true},{t:'Contract Value',r:true},{t:'Start'},{t:'Renewal'},{t:'Utilisation',r:true},{t:'Owner'},{t:'Risk'}],
     D.vendors.map(v=>[`<div class="ent">${brandMark(v.k)}<b>${v.k}</b></div>`,`<span class="sub">${v.cat}</span>`,moneyK(v.v),moneyK(v.contract),
-      `<span class="id">${v.start}</span>`,`<span class="id">${v.renew}</span>`,utilCell(v.util),personCell(v.owner),riskBadge(v.risk)]),
+      `<span class="id">${v.start}</span>`,`<span class="id">${v.renew}</span>`,utilCell(v.util),personName(v.owner),riskBadge(v.risk)]),
     ['Top 10 vendors','',moneyK(1326),moneyK(1492),'','','82% of spend','','']),
     note:'Risk here means <b>renewal risk</b>: high spend, low utilisation, or a date close enough that switching is no longer realistic.'})}
 
@@ -835,7 +850,7 @@ S.optimize = () => {
 
   ${card({span:12,title:'Optimisation Backlog',sub:'Every opportunity, with an owner and a date',pad:false,body:table(
     [{t:'Opportunity'},{t:'Category'},{t:'Effort'},{t:'Confidence'},{t:'Owner'},{t:'Target Date'},{t:'Status'},{t:'Annual Saving',r:true}],
-    D.opps.map(o=>[`<b>${o.o}</b>`,o.cat,o.eff,o.conf,personCell(o.owner),`<span class="id">${o.due}</span>`,stBadge(o.st),moneyK(o.s)]),
+    D.opps.map(o=>[`<b>${o.o}</b>`,o.cat,o.eff,o.conf,personName(o.owner),`<span class="id">${o.due}</span>`,stBadge(o.st),moneyK(o.s)]),
     [D.opps.length+' opportunities','','','','','','',money(D.identified)]),
     note:'Every line has one owner and one date. Anything without both is not an opportunity, it is an observation.'})}
 
@@ -920,7 +935,7 @@ S.allocation = () => {
     dims.map(r=>{
       const c = Math.min(99.9,Math.max(50,cov+r[1])), a = Math.round(D.ytdActual*c/100);
       return [r[0],moneyK(a),moneyK(D.ytdActual-a),
-        `<span class="delta ${c>95?'gup':'gdown'}">${c.toFixed(1)}%</span>`,personCell(r[2])];
+        `<span class="delta ${c>95?'gup':'gdown'}">${c.toFixed(1)}%</span>`,personName(r[2])];
     }),
     null),
     note:`<b>${weakest[0]}</b> is the weakest dimension at <b>${Math.max(50,cov+weakest[1]).toFixed(1)}%</b> — which is why per-${weakest[0].toLowerCase()} unit cost is still an estimate.`})}
@@ -1086,11 +1101,7 @@ function anomalyRow(a,i){
       </span>
       <span class="anom-fig">
         <span class="anom-num delta ${over>=0?'up':'down'}">${over>=0?'+':'−'}${moneyK(Math.abs(over))}</span>
-        <span class="anom-lab">above expected</span>
-      </span>
-      <span class="anom-fig">
-        <span class="anom-num delta ${varp>=0?'up':'down'}">${varp>=0?'+':'−'}${Math.abs(Math.round(varp))}%</span>
-        <span class="anom-lab">${moneyK(a.exp)} → ${moneyK(a.act)}</span>
+        <span class="anom-lab">${varp>=0?'+':'−'}${Math.abs(Math.round(varp))}% above expected</span>
       </span>
       <span class="anom-st">${badge(a.st,a.st==='Resolved'?'ok':a.st==='Fix deployed'?'med':'high')}</span>
       <span class="anom-caret" aria-hidden="true">${icon('caret')}</span>
@@ -1109,6 +1120,20 @@ function anomalyRow(a,i){
     </div>
   </div>`;
 }
+
+/* The row grid's own column labels (styles.css, .anom-cols) — collapsed, the
+   list used to say "which matters and by how much" with no word saying what
+   the numbers WERE, which read as missing headers next to every table on the
+   other screens. aria-hidden: the real label for a reader (and for a screen
+   reader) is .anom-lab on the row itself; this is a visual header only, not a
+   second copy of that text. */
+const anomCols = () => `<div class="anom-cols" aria-hidden="true">
+  <span></span>
+  <span>Anomaly</span>
+  <span class="anom-cols-fig">Impact</span>
+  <span class="anom-cols-st">Status</span>
+  <span></span>
+</div>`;
 
 /* Severity band first, and inside a band the biggest miss first.  The datasets
    author their anomalies severity-first already but say nothing about the order
@@ -1213,7 +1238,7 @@ S.anomalies = () => {
        this screen at 1200px. */''}
   ${card({span:12,title:'Detected Anomalies',
     sub:'Most severe first, then by the size of the miss. Open one for the cause, the owner and what happens next.',pad:false,
-    body:A.length ? rowList(A.map(anomalyRow),'anomalies')
+    body:A.length ? anomCols()+rowList(A.map(anomalyRow),'anomalies')
       : emptyState('No Anomalies Match These Filters','Widen the period, or clear a filter in the row above. Nothing detected is not the same as nothing spent.'),
     note:worst?`<b>${worst.svc} on ${worst.prod}</b> is the largest single gap — <b>${moneyK(worst.act-worst.exp)}</b> above expectation in one month, ${worst.st.toLowerCase()} with <b>${worst.owner}</b>.`
       :'Nothing in this slice moved far enough from its expected value to be flagged.'})}
@@ -1230,7 +1255,7 @@ S.anomalies = () => {
         + table([{t:'Field'},{t:'Value'},{t:'Field'},{t:'Value'}],[
       ['Resource name',`<span class="id">${res.name}</span>`,'Current month',`<b>${moneyK(res.cur)}</b>`],
       ['Resource ID',`<span class="id">${res.id}</span>`,'Previous month',moneyK(res.prev)],
-      ['Owner',personCell(res.owner,'sm'),'Change',
+      ['Owner',personName(res.owner),'Change',
         `<span class="delta ${resChange>0?'up':resChange<0?'down':'flat'}">${resChange>0?'+':resChange<0?'−':''}${Math.abs(resChange).toFixed(1)}%</span>`],
       ['Product',res.product,'Average CPU',`<span class="delta ${res.util<30?'gdown':'flat'}">${res.util}%</span>`],
       ['Environment',res.env,'Recommendation',`<b>${res.rec}</b>`],
@@ -1500,7 +1525,7 @@ const attrEsc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&q
 const alertRow = (a,i) => `<div class="row alertrow">
   <span class="alert-sev">${sevBadge(a.sev)}</span>
   <span class="alert-what"><span class="t">${a.t}</span><span class="d">${a.prod}</span></span>
-  <span class="alert-who">${personCell(a.owner)}</span>
+  <span class="alert-who">${personName(a.owner)}</span>
   <span class="alert-act">${a.act}</span>
   <span class="alert-fig"><span class="v">${a.impact?moneyK(a.impact):'—'}</span><span class="alert-lab">impact / mo</span></span>
   <span class="alert-fig good"><span class="v">${moneyK(a.save)}</span><span class="alert-lab">saving / yr</span></span>

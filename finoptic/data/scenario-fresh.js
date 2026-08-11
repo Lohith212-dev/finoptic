@@ -1012,6 +1012,7 @@ FINOPTIC.scenario(
     {
       "o": "Move the steady-state AWS compute onto a Savings Plan",
       "cat": "Cloud",
+      "spend": 6,
       "s": 4,
       "eff": "Low",
       "conf": "Medium",
@@ -1022,6 +1023,7 @@ FINOPTIC.scenario(
     {
       "o": "Reclaim 5 Claude Pro seats that have never been used",
       "cat": "AI",
+      "spend": 6,
       "s": 3,
       "eff": "Low",
       "conf": "Medium",
@@ -1032,6 +1034,7 @@ FINOPTIC.scenario(
     {
       "o": "Right-size the Grafana Cloud plan at the December renewal",
       "cat": "Observability",
+      "spend": 4,
       "s": 2,
       "eff": "Low",
       "conf": "Low",

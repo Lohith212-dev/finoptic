@@ -1395,6 +1395,7 @@ FINOPTIC.scenario(
     {
       "o": "Raise AWS Savings Plan coverage from 52% to 85%",
       "cat": "Cloud",
+      "spend": 161,
       "s": 96,
       "eff": "Low",
       "conf": "High",
@@ -1405,6 +1406,7 @@ FINOPTIC.scenario(
     {
       "o": "Rightsize 62 oversized instances across Alpha and Beta",
       "cat": "Cloud",
+      "spend": 286,
       "s": 74,
       "eff": "Medium",
       "conf": "High",
@@ -1415,6 +1417,7 @@ FINOPTIC.scenario(
     {
       "o": "Renegotiate the Microsoft EA at the 140-seat tier",
       "cat": "Contract",
+      "spend": 561,
       "s": 62,
       "eff": "High",
       "conf": "Medium",
@@ -1425,6 +1428,7 @@ FINOPTIC.scenario(
     {
       "o": "Schedule non-production environments to office hours",
       "cat": "Cloud",
+      "spend": 188,
       "s": 48,
       "eff": "Medium",
       "conf": "High",
@@ -1435,6 +1439,7 @@ FINOPTIC.scenario(
     {
       "o": "Consolidate overlapping GenAI seats (54 employees on 3+ tools)",
       "cat": "AI",
+      "spend": 156,
       "s": 44,
       "eff": "Medium",
       "conf": "High",
@@ -1445,6 +1450,7 @@ FINOPTIC.scenario(
     {
       "o": "Move Epsilon inference to a smaller model",
       "cat": "AI",
+      "spend": 102,
       "s": 34,
       "eff": "Medium",
       "conf": "Medium",
@@ -1455,6 +1461,7 @@ FINOPTIC.scenario(
     {
       "o": "Reclaim 38 inactive Microsoft 365 E5 seats",
       "cat": "Licence",
+      "spend": 61,
       "s": 32,
       "eff": "Low",
       "conf": "High",
@@ -1465,6 +1472,7 @@ FINOPTIC.scenario(
     {
       "o": "Drop high-cardinality labels on Gamma and Epsilon metrics",
       "cat": "Observability",
+      "spend": 74,
       "s": 28,
       "eff": "Medium",
       "conf": "High",
@@ -1475,6 +1483,7 @@ FINOPTIC.scenario(
     {
       "o": "Commit Google Cloud to a three-year discount",
       "cat": "Contract",
+      "spend": 84,
       "s": 24,
       "eff": "Medium",
       "conf": "High",
@@ -1485,6 +1494,7 @@ FINOPTIC.scenario(
     {
       "o": "Cut non-production log retention from 90 to 30 days",
       "cat": "Observability",
+      "spend": 35,
       "s": 18,
       "eff": "Low",
       "conf": "High",
@@ -1495,6 +1505,7 @@ FINOPTIC.scenario(
     {
       "o": "Consolidate three Atlassian sites into one",
       "cat": "SaaS",
+      "spend": 77,
       "s": 16,
       "eff": "High",
       "conf": "Medium",
@@ -1505,6 +1516,7 @@ FINOPTIC.scenario(
     {
       "o": "Retire duplicate whiteboard and diagramming tools",
       "cat": "SaaS",
+      "spend": 28,
       "s": 14,
       "eff": "Low",
       "conf": "High",
@@ -1515,6 +1527,7 @@ FINOPTIC.scenario(
     {
       "o": "Move 34 non-dev users off GitHub Enterprise",
       "cat": "Licence",
+      "spend": 20,
       "s": 12,
       "eff": "Low",
       "conf": "High",
@@ -1525,6 +1538,7 @@ FINOPTIC.scenario(
     {
       "o": "Delete unattached disks and stale snapshots",
       "cat": "Cloud",
+      "spend": 10,
       "s": 6,
       "eff": "Low",
       "conf": "High",
@@ -1535,6 +1549,7 @@ FINOPTIC.scenario(
     {
       "o": "Enable prompt caching on the Beta extraction pipeline",
       "cat": "AI",
+      "spend": 16,
       "s": 4,
       "eff": "Medium",
       "conf": "High",

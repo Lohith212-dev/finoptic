@@ -97,6 +97,33 @@ function lineChart(series, labels, o={}){
      in the row, so a chart drawn short leaves a visible void under itself in a
      card sized by its neighbour. */
   const W=o.w||680, H=o.h||244, L=44, R=12, Tp=12, B=24;
+  /* ROUND 17: draw only the months a period actually left in the data.
+     deriveView() masks the months a filter excludes to null rather than
+     removing them, so a five-month selection used to draw against the fixed
+     twelve-slot axis every full-year call passes — the line occupied a third
+     of the card and the other two thirds sat empty, which is the "occupies
+     only a corner" fault.  The count that decides this is taken from the
+     SOLID series only (dash:true is a forecast/comparison line, which by
+     design anchors on the last closed month and projects past it — that
+     projection is the reason the full-year chart still shows a dot beyond
+     the closed data, and counting it here would make one closed month look
+     like two). One active month cannot be a line at all — smoothPath()
+     already refuses a stroke through fewer than two points — so it draws as
+     what it is, a bar per series, via barMonth(). */
+  const solid = series.filter(s=>!s.dash);
+  const activeIdx = [];
+  labels.forEach((_,i)=>{
+    if(solid.some(s=>s.values[i]!==null&&s.values[i]!==undefined)) activeIdx.push(i);
+  });
+  if(activeIdx.length===1) return barMonth(solid, activeIdx[0], labels[activeIdx[0]], o);
+  let first=-1, last=-1;
+  labels.forEach((_,i)=>{
+    if(series.some(s=>s.values[i]!==null&&s.values[i]!==undefined)){ if(first<0) first=i; last=i; }
+  });
+  if(first>=0 && (first>0 || last<labels.length-1)){
+    labels = labels.slice(first,last+1);
+    series = series.map(s=>Object.assign({},s,{values:s.values.slice(first,last+1)}));
+  }
   const all = series.flatMap(s=>s.values).filter(v=>v!==null&&v!==undefined);
   if(!all.length) return emptyState('No data in this period','Widen the period filter to see a trend.');
   const max = o.max || Math.ceil(Math.max(...all)*1.12/10)*10, min=0;
@@ -159,6 +186,46 @@ function lineChart(series, labels, o={}){
   });
   return `<svg viewBox="0 0 ${W} ${H}"><defs>${defs}</defs>${areas}${g}${hit}</svg>
   <div class="legend">${series.map(s=>`<div><i style="background:var(${s.color});${s.dash?'height:2px;border-radius:0':''}"></i>${s.name}</div>`).join('')}</div>`;
+}
+
+/* ---- ROUND 17: the single-month case of a trend chart ----
+   One reading per series is a fact, not a movement, and a line chart can only
+   draw a fact as a lone dot stranded on an otherwise blank twelve-slot grid —
+   which is the shape the "occupies only a corner" complaint was actually
+   describing at its worst.  Bars say the same numbers without implying a trend
+   a single point cannot carry, on the same axis and the same $ formatting as
+   the chart they stand in for, so the card does not change vocabulary when
+   the period pill does. */
+function barMonth(series, idx, label, o={}){
+  const W=o.w||680, H=o.h||244, L=44, R=12, Tp=12, B=24;
+  const rows = series.map(s=>({name:s.name, v:s.values[idx], color:s.color}))
+    .filter(r=>r.v!==null && r.v!==undefined);
+  if(!rows.length) return emptyState('No data in this period','Widen the period filter to see a trend.');
+  const max = o.max || Math.ceil(Math.max(...rows.map(r=>r.v))*1.12/10)*10 || 1;
+  const y = v => Tp + (H-Tp-B)*(1-v/max);
+  const slot = (W-L-R)/rows.length, bw = Math.min(64, slot*0.5);
+  const cx = i => L + slot*(i+0.5);
+  let defs='', g='';
+  [0,.25,.5,.75,1].forEach(t=>{const v=max*t; g+=`<line class="gridline" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/>
+    <text class="axis" x="${L-8}" y="${y(v)+3}" text-anchor="end">${o.fmt?o.fmt(v):'$'+Math.round(v)+'K'}</text>`});
+  rows.forEach((r,i)=>{
+    const grad = 'barm'+(++gradUid);
+    defs += `<linearGradient id="${grad}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:color-mix(in srgb, var(${r.color}) 74%, #fff)"/>
+      <stop offset="1" style="stop-color:var(${r.color})"/></linearGradient>`;
+    const h = (H-Tp-B)*r.v/max;
+    g += `<rect x="${(cx(i)-bw/2).toFixed(1)}" y="${y(r.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="url(#${grad})"/>
+      <text class="axis" x="${cx(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${r.name}</text>`;
+  });
+  g += `<text class="axis" x="${W-R}" y="${Tp-2}" text-anchor="end">${label}</text>`;
+  let hit='';
+  rows.forEach((r,i)=>{
+    hit += ctCol(cx(i)-slot/2, Tp, slot, H-Tp-B,
+      {t:label, r:[{n:r.name, v:(o.fmt?String(o.fmt(r.v)):moneyK(r.v)), c:r.color}]},
+      ctDot(cx(i), y(r.v), r.color));
+  });
+  return `<svg viewBox="0 0 ${W} ${H}"><defs>${defs}</defs>${g}${hit}</svg>
+  <div class="legend">${rows.map(r=>`<div><i style="background:var(${r.color})"></i>${r.name}</div>`).join('')}</div>`;
 }
 
 /* ---- monotone cubic interpolation (Fritsch-Carlson, 1980) ----
@@ -305,7 +372,13 @@ function sparkline(values, o={}){
   /* Index is kept with the value so a hover can name the right month after the
      nulls are dropped. */
   let pts = values.map((v,i)=>({v,i})).filter(p=>p.v!==null && p.v!==undefined && !Number.isNaN(p.v));
-  if(!pts.length) return '';
+  /* ROUND 17 REVERSES the single-point treatment two paragraphs below: a
+     narrowed-to-one-month period used to leave a lone dot floating in the
+     tile, which read as a broken chart rather than a reading with nothing to
+     compare against.  A dot with no stroke is still a trend widget with
+     nothing to show, so it is dropped rather than drawn — the figure beside
+     it already states the number this box could only repeat. */
+  if(pts.length<2) return '';
   const vals = pts.map(p=>p.v);
   let hi = Math.max(...vals), lo = Math.min(...vals, o.zero===true?0:Math.min(...vals));
   /* The flatness guard.  Without it a series running 30.1, 30.4, 30.2 fills the box
@@ -323,8 +396,8 @@ function sparkline(values, o={}){
   const xy = pts.map((p,n)=>[x(n), y(p.v)]);
   const col = o.color || '--c1';
 
-  /* One point is a reading, not a trend: it gets the end dot and no stroke, which
-     is what a ten-week-old workspace on a one-month period shows. */
+  /* `xy.length>1` always holds past the guard above; the check stays because
+     it is what makes this safe to read on its own. */
   let g = '';
   if(xy.length>1){
     const d = smoothPath(xy);
@@ -360,6 +433,19 @@ function sparkline(values, o={}){
 
 function stackedBars(labels, series, o={}){
   const W=o.w||680,H=o.h||244,L=44,R=12,Tp=12,B=24;
+  /* ROUND 17: same fix as lineChart() — trim to the months the filter left
+     rather than the fixed window every call site passes, so a narrowed
+     period draws fewer, wider bars instead of one bar lost among a dozen
+     empty slots. Already a bar chart, so a single month left standing needs
+     no further conversion — it just becomes one wide bar. */
+  let first=-1, last=-1;
+  labels.forEach((_,i)=>{
+    if(series.some(s=>s.values[i]!==null&&s.values[i]!==undefined)){ if(first<0) first=i; last=i; }
+  });
+  if(first>=0 && (first>0 || last<labels.length-1)){
+    labels = labels.slice(first,last+1);
+    series = series.map(s=>Object.assign({},s,{values:s.values.slice(first,last+1)}));
+  }
   const totals = labels.map((_,i)=>series.reduce((s,x)=>s+(x.values[i]||0),0));
   /* `!totals.length` first.  Math.max() of NOTHING is -Infinity, which is
      truthy, so a series with no columns at all sailed past this guard and
@@ -585,12 +671,22 @@ function bandChart(o){
   const labels=D.meta.months.concat(['Aug','Sep','Oct']);
   const closed=D.meta.closed;
   const act=D.trend.actual.slice(0,closed).concat(new Array(15-closed).fill(null));
-  const last=D.trend.actual.filter(v=>v!==null).slice(-1)[0]||0;
   /* new Array(-1) throws RangeError, and an exception here killed the whole
      render — sidebar and all — rather than one card.  A forecast needs a
      closed month to project from, so say so instead. */
   if(closed < 1) return emptyState('No forecast yet',
     'A projection needs at least one closed month to run from.');
+  const knownActual = D.trend.actual.filter(v=>v!==null);
+  /* A period filter can exclude every closed month without the workspace
+     itself having zero (deriveView masks the rest to null) — `fresh`, two
+     closed months, with the period set to H2 is exactly that.  The old
+     `||0` fallback let that through as a real anchor of $0K, and every
+     y-coordinate on the chart divides by `max`, which that anchor took to
+     zero: every line, dot and gridline came out NaN instead of one caught
+     card. */
+  if(!knownActual.length) return emptyState('No data in this period',
+    'Widen the period filter to include a closed month.');
+  const last=knownActual.slice(-1)[0];
   const pad=n=>new Array(closed-1).fill(null).concat(n);
   const base=pad([last,Math.round(last*.99),Math.round(last*1.01),Math.round(last*1.04),Math.round(last*1.06)]);
   const up  =pad([last,Math.round(last*1.04),Math.round(last*1.09),Math.round(last*1.14),Math.round(last*1.19)]);

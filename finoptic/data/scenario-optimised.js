@@ -1353,6 +1353,7 @@ FINOPTIC.scenario(
     {
       "o": "Savings Plan and reserved coverage raised to 88%",
       "cat": "Cloud",
+      "spend": 92,
       "s": 48,
       "eff": "Low",
       "conf": "High",
@@ -1363,6 +1364,7 @@ FINOPTIC.scenario(
     {
       "o": "Alpha reasoning agent moved to prompt caching",
       "cat": "AI",
+      "spend": 113,
       "s": 34,
       "eff": "Medium",
       "conf": "High",
@@ -1373,6 +1375,7 @@ FINOPTIC.scenario(
     {
       "o": "Gamma classification routed to GPT-5 mini",
       "cat": "AI",
+      "spend": 77,
       "s": 28,
       "eff": "Medium",
       "conf": "High",
@@ -1383,6 +1386,7 @@ FINOPTIC.scenario(
     {
       "o": "Beta Azure VM fleet rightsized (14 instances)",
       "cat": "Cloud",
+      "spend": 85,
       "s": 24,
       "eff": "Medium",
       "conf": "High",
@@ -1393,6 +1397,7 @@ FINOPTIC.scenario(
     {
       "o": "Microsoft EA renegotiated at the March renewal",
       "cat": "Contract",
+      "spend": 109,
       "s": 22,
       "eff": "High",
       "conf": "High",
@@ -1403,6 +1408,7 @@ FINOPTIC.scenario(
     {
       "o": "Non-production log retention cut to 30 days",
       "cat": "Observability",
+      "spend": 30,
       "s": 18,
       "eff": "Low",
       "conf": "High",
@@ -1413,6 +1419,7 @@ FINOPTIC.scenario(
     {
       "o": "Duplicate diagramming tools retired",
       "cat": "SaaS",
+      "spend": 23,
       "s": 14,
       "eff": "Low",
       "conf": "High",
@@ -1423,6 +1430,7 @@ FINOPTIC.scenario(
     {
       "o": "21 dormant Microsoft 365 E5 seats reclaimed",
       "cat": "Licence",
+      "spend": 25,
       "s": 12,
       "eff": "Low",
       "conf": "High",
@@ -1433,6 +1441,7 @@ FINOPTIC.scenario(
     {
       "o": "Move Atlassian to a two-year commitment",
       "cat": "Contract",
+      "spend": 39,
       "s": 11,
       "eff": "Medium",
       "conf": "High",
@@ -1443,6 +1452,7 @@ FINOPTIC.scenario(
     {
       "o": "Drop high-cardinality labels on Gamma metrics",
       "cat": "Observability",
+      "spend": 27,
       "s": 9,
       "eff": "Medium",
       "conf": "High",
@@ -1453,6 +1463,7 @@ FINOPTIC.scenario(
     {
       "o": "Scale idle Kubernetes node pools to zero overnight",
       "cat": "Cloud",
+      "spend": 13,
       "s": 8,
       "eff": "Low",
       "conf": "High",
@@ -1463,6 +1474,7 @@ FINOPTIC.scenario(
     {
       "o": "Move 9 non-dev users off GitHub Enterprise",
       "cat": "Licence",
+      "spend": 12,
       "s": 7,
       "eff": "Low",
       "conf": "High",
@@ -1473,6 +1485,7 @@ FINOPTIC.scenario(
     {
       "o": "Monthly sweep of unattached disks and stale snapshots",
       "cat": "Cloud",
+      "spend": 11,
       "s": 6,
       "eff": "Low",
       "conf": "High",
@@ -1483,6 +1496,7 @@ FINOPTIC.scenario(
     {
       "o": "Reduce the Grafana Cloud tier at renewal",
       "cat": "Contract",
+      "spend": 14,
       "s": 5,
       "eff": "Medium",
       "conf": "Medium",

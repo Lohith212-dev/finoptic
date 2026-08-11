@@ -450,10 +450,10 @@ h1,h2,h3,h4,h5,h6{font-weight:700; letter-spacing:-.015em; line-height:1.18; mar
 /* Sidebar footer — the profile row opens a menu holding everything that is
    about "me and how I'm looking at this", including the demo-only accent
    switcher.  It used to sit in the nav as a labelled dev control. */
-.navfoot{position:relative; padding-top:12px; margin-top:12px; border-top:1px solid var(--line)}
+.navfoot{position:relative; padding-top:14px; margin-top:12px; border-top:1px solid var(--line)}
 .profile{
   position:relative;
-  display:flex; align-items:center; gap:10px; width:100%; padding:5px 6px;
+  display:flex; align-items:center; gap:11px; width:100%; padding:8px;
   border:0; background:none; border-radius:var(--r-control); cursor:pointer;
   text-align:left; transition:background .15s ease;
 }
@@ -472,7 +472,7 @@ h1,h2,h3,h4,h5,h6{font-weight:700; letter-spacing:-.015em; line-height:1.18; mar
    round tokens that mean "a person in a table" (§7). */
 .avatar{
   position:relative; overflow:hidden;
-  display:grid; place-items:center; width:32px; height:32px; flex:0 0 32px;
+  display:grid; place-items:center; width:38px; height:38px; flex:0 0 38px;
   border-radius:var(--r-tile);
   background:
     radial-gradient(112% 96% at 50% 118%,
@@ -484,23 +484,32 @@ h1,h2,h3,h4,h5,h6{font-weight:700; letter-spacing:-.015em; line-height:1.18; mar
      is the weakest contrast this tile could pick, and it is the fallback that
      shows when no photo has been supplied. */
   color:color-mix(in srgb, var(--accent) 45%, var(--ink));
-  font-size:12px; font-weight:700; letter-spacing:-.01em;
+  font-size:13.5px; font-weight:700; letter-spacing:-.01em;
 }
 .avatar-i{
   position:absolute; inset:0; width:100%; height:100%;
   object-fit:cover; object-position:50% 10%; display:block;
 }
-.profile .who{min-width:0; flex:1; line-height:1.25}
-.profile .who b{display:block; font-size:12.5px; font-weight:600; overflow:hidden;
-  text-overflow:ellipsis; white-space:nowrap}
-.profile .who > span{display:block; font-size:11px; color:var(--ink-3); overflow:hidden;
+.profile .who{min-width:0; flex:1; line-height:1.3; display:flex; flex-direction:column; gap:2px}
+/* The name and its role chip share one line — the same "name, then a small
+   chip beside it" shape as .acct-you in the Team & access table — while the
+   chip itself never truncates: min-width:0 sits on the name alone, so a long
+   name gives way with an ellipsis before the role does. */
+.profile .who-name{display:flex; align-items:center; gap:6px; min-width:0}
+.profile .who-name b{font-size:13.5px; font-weight:600; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; min-width:0}
+.profile-role{
+  flex:0 0 auto; padding:2px 6px; border-radius:var(--r-chip);
+  background:var(--surface-2); font-size:9.5px; font-weight:600; color:var(--ink-3);
+}
+.profile .who-sub{display:block; font-size:11px; color:var(--ink-3); overflow:hidden;
   text-overflow:ellipsis; white-space:nowrap}
 .profile .caret{flex:0 0 14px; color:var(--ink-4); transition:transform .18s ease}
 .profile[aria-expanded="true"] .caret{transform:rotate(180deg)}
 /* An unread count on the profile row, so hiding the bell in the collapsed rail
    does not hide the fact that there is something to read. */
 .profile .dot{
-  position:absolute; top:3px; left:31px; width:9px; height:9px; border-radius:50%;
+  position:absolute; top:5px; left:36px; width:9px; height:9px; border-radius:50%;
   background:var(--neg); border:2px solid var(--surface); box-sizing:content-box;
 }
 
@@ -1076,7 +1085,16 @@ html[data-ledger="min"] .ledger-stats{
 }
 
 /* ---------- content grid (§4, §8) ---------- */
-.content{padding:18px var(--pad-content) 64px}
+/* Bottom padding clears Finn's docked composer, not just an even number. The
+   composer is `position:fixed` (.finn, styles.css §12) and sits OUTSIDE this
+   scrolling column, so nothing here pushes it down the way a normal in-flow
+   sibling would -- if this padding is shorter than the composer's own on-screen
+   footprint, scrolling to the end of the page still leaves the last card or
+   tile sitting behind it. Measured, not guessed: the dock is 54px tall inside
+   .finn's own 24px padding, 78px from the viewport's bottom edge at rest, so
+   64px was always short by 14px before this card's own tail padding even
+   started. 96px clears that with room to spare. */
+.content{padding:18px var(--pad-content) 96px}
 /* STRETCH, not start.  Widths vary by design — 8/4, 6/6, 7/5, three-up — but
    every box in a row squares off at the same height, and that regularity is what
    makes a board read as laid out rather than as assembled.  v3.1 let cards size
@@ -1325,6 +1343,29 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
   font-size:11px; font-weight:500; color:var(--ink-3); margin-left:auto;
   white-space:nowrap; flex:0 0 auto; align-self:flex-start; padding-top:3px;
 }
+/* A card's own tabs (§7) — the SAME segmented control `.sum-tabs` is, filled
+   with ink rather than accent for the reason given there: choosing which
+   slice of a card to look at is navigation, not a filter, and the accent
+   stays the period pill's alone (§0.3).  Smaller than the page-level control
+   because a card header has a fraction of the room a screen header does. */
+.card-tabs{
+  display:flex; flex:0 0 auto; gap:2px; padding:2px; margin-left:auto;
+  background:var(--surface-3); border-radius:var(--r-control);
+}
+.card-tab{
+  border:0; cursor:pointer; padding:0 9px; height:24px;
+  border-radius:calc(var(--r-control) - 3px); background:none;
+  font:600 11px/1 var(--sans); color:var(--ink-3); white-space:nowrap;
+  transition:background .15s ease, color .15s ease;
+}
+.card-tab:hover{color:var(--ink)}
+.card-tab.on{background:var(--ink); color:#fff}
+/* Transparent to the flex layout it sits in: `.card-b`'s own flex-column rules
+   (below, and the legend-sink rule further down) are written against ITS
+   direct children, and a switched-content wrapper should not have to repeat
+   them to keep the pane it holds behaving like any other card body. */
+.card-pane{display:contents}
+.card-pane[hidden]{display:none}
 /* A padded body fills its card too, so a donut-plus-legend beside a taller table
    spreads its legend rows rather than stacking them at the top and leaving a
    150px void underneath. */
@@ -1335,13 +1376,17 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
    card by card and the list stopped reading as a list.  It still SINKS to the
    card's bottom edge (the rule further down), so the slack lands in one place
    above it rather than being shared out as ragged interior gaps. */
-.card-b > .legend.rows{flex:0 0 auto}
+.card-b > .legend.rows, .card-b > .card-pane > .legend.rows{flex:0 0 auto}
 /* A chart's series key sinks to the bottom of whatever room the card has.
    A chart SVG is fixed-aspect, so it cannot grow to fill a card sized by a
    taller neighbour in the same grid row — and with the legend tucked directly
    under the chart, ALL of that slack pooled below the legend and read as a void.
-   Pushed to the bottom edge, the same pixels read as space around the plot. */
-.card-b > .legend:last-child{margin-top:auto; padding-top:10px}
+   Pushed to the bottom edge, the same pixels read as space around the plot.
+   The `.card-pane` variant is the SAME rule reaching through a tabbed card's
+   pane wrapper — `display:contents` (above) puts the legend back in `.card-b`'s
+   own flex-column formatting context, but the selector still has to name the
+   DOM parent it actually has. */
+.card-b > .legend:last-child, .card-b > .card-pane > .legend:last-child{margin-top:auto; padding-top:10px}
 .card-b{padding:var(--card-h-gap) var(--pad-card) var(--pad-card)}
 /* A card with a header gets the gap; a bare card keeps its own padding. */
 .card > .card-b:first-child{padding-top:var(--pad-card)}
@@ -1941,7 +1986,10 @@ svg{display:block; max-width:100%}
 @media (max-width:700px){
   .navitem,.btn,.chip{min-height:44px}
   :root{--pad-content:14px}
-  .content{padding:14px var(--pad-content) 48px}
+  /* Same clearance as the desktop rule above, re-measured: below 900px .finn's
+     own padding drops to 12px, so the dock's footprint shrinks to ~66px rather
+     than 78px -- 80px still leaves a visible gap instead of landing flush. */
+  .content{padding:14px var(--pad-content) 80px}
 
   /* NOTHING PINS AT PHONE WIDTH, AND BOTH ROWS WRAP.
      The controls row and the reconciliation strip are single-line flex rows that
@@ -2999,15 +3047,35 @@ html[data-ledger="min"] .ledger.fresh .ledger-v.dash{font-size:14px}
    sized each row to its own content and the money columns came out ragged down
    the list, which is the one thing this layout exists to prevent.  The widths
    below are the widest real content each column carries: "Critical",
-   "above expected", "$22.1K → $31.4K" and "Root cause found". */
+   "+118% above expected" (the widest of the two figures the impact column used
+   to hold before they merged — see the note above anomalyRow() in screens.js)
+   and "Root cause found". */
 .anom-h{
   display:grid; width:100%; text-align:left; border:0; background:none; cursor:pointer;
-  grid-template-columns:74px minmax(0,1fr) 100px 116px 118px 16px;
+  grid-template-columns:74px minmax(0,1fr) 150px 118px 16px;
   align-items:center; gap:16px; padding:13px var(--pad-card);
   color:inherit; font:inherit; transition:background .15s ease;
 }
 .anom-h:hover{background:var(--surface-3)}
 .row.anom.open > .anom-h{background:var(--surface-3)}
+
+/* The column labels the row grid never had — collapsed, a row answered "which
+   matters and by how much" with no word saying what the numbers were, which
+   read as the list having no header at all next to every other screen's tables.
+   A plain row rather than a <table>'s <thead>: it reuses the row's own grid
+   (same tracks, same gap) so the labels line up over their columns without
+   reintroducing the ten-column table this screen replaced (see the note above
+   the Detected Anomalies card in screens.js). aria-hidden because the row
+   button below already carries the real label in .anom-lab on every row — this
+   is a visual header only, not a second source of the same text. */
+.anom-cols{
+  display:grid; width:100%;
+  grid-template-columns:74px minmax(0,1fr) 150px 118px 16px;
+  align-items:center; gap:16px; padding:0 var(--pad-card) 9px;
+  font-size:11px; color:var(--ink-3); border-bottom:1px solid var(--line-2);
+}
+.card-h + .anom-cols{margin-top:var(--card-h-gap)}
+.anom-cols-fig{text-align:right}
 
 .anom-name{min-width:0}
 .anom-name > b{
@@ -3110,11 +3178,11 @@ html[data-ledger="min"] .ledger.fresh .ledger-v.dash{font-size:14px}
 /* The product is the title's scope, so it sits under the title as a caption
    rather than competing with the owner and the action for the same line. */
 .alertrow .d{display:block}
-/* One column, one item type.  The owner cell is only ever an avatar and a name,
-   so its avatars form a column down the feed instead of following the end of
-   whatever text preceded them. */
+/* One column, one item type.  The owner cell is only ever a name, so it forms a
+   column down the feed instead of following the end of whatever text preceded
+   it. Text only, no avatar (personName() in people.js) -- the same avatar
+   removal every other table in the product went through. */
 .alert-who{min-width:0; display:flex; align-items:center; grid-area:who}
-.alert-who .pcell{min-width:0}
 /* The recommendation is the thing a reader is scanning FOR, so it is ink rather
    than the grey the sub-line used to render it in. */
 .alert-act{
@@ -3337,29 +3405,23 @@ html.mdl-open{overflow:hidden; padding-right:var(--sbw,0px)}
    ------------------------------------------------------------
    The anomaly row's fixed tracks are what make it scan; they are also what
    would put a scrollbar under it once the content column drops below about
-   840px.  So the tracks are given up in two steps rather than allowed to
-   overflow — the status chip folds into the panel first, then the row becomes
-   two lines with the figures beneath the name.
+   840px.  So the status chip folds into the panel below 1120px rather than
+   letting the row overflow.  Merging the two figure columns into one (see
+   anomalyRow() in screens.js) already removed the second step this used to
+   take at 900px — one column has nothing left to give up before the panel.
    ============================================================ */
 /* The narrowest the content column ever gets in the range this mock-up is
    reviewed at is ~805px, at 1181px — one pixel before the sidebar drops to the
-   mini rail and hands ~200px back.  Six tracks still leave the name ~300px
+   mini rail and hands ~200px back.  Five tracks still leave the name ~300px
    there, so the status chip survives the whole of 1200–1440 rather than folding
    at the first breakpoint that looked plausible. */
 @media (max-width:1120px){
-  .anom-h{grid-template-columns:74px minmax(0,1fr) 100px 116px 16px; gap:14px}
-  .anom-st{display:none}
+  .anom-h,.anom-cols{grid-template-columns:74px minmax(0,1fr) 150px 16px; gap:14px}
+  .anom-st,.anom-cols-st{display:none}
   .mdl-figs{grid-template-columns:1fr 1fr}
   .anom-facts{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
-/* Below here the sidebar has already dropped to the mini rail, so the content
-   column is WIDER than it is at 1200 — these two only matter on a genuinely
-   small window, and both give up the ratio rather than the money, because
-   "by how much" is the question the collapsed row exists to answer.  The
-   expected → actual pair survives in the panel either way. */
 @media (max-width:900px){
-  .anom-h{grid-template-columns:74px minmax(0,1fr) 100px 16px}
-  .anom-fig:nth-of-type(4){display:none}
   /* Narrow, the seven tracks fold into three rows of the SAME grid rather than a
      wrapping flex line — so the columns still line up down the feed, they are
      just stacked.  Severity keeps the title company, owner and action share the

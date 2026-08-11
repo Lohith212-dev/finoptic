@@ -211,17 +211,33 @@ const kpi = ({k,v,foot,delta,dir,hero,ic,tone,ytd,spark,sparkOpts}) => {
 /* Card (§7).  Title is 16/700 with an optional grey sub-line and an icon tile,
    then --card-h-gap of real space before the first row.  The old header was
    15/700 with 12px, which is why a headline did not read as one.
-   `est` marks a card whose figures were scaled rather than measured. */
-const card = ({title,sub,hint,body,note,span=6,pad=true,ic,tone,est}) => `
-  <div class="card c${span}">
+   `est` marks a card whose figures were scaled rather than measured.
+   `tabs` is `[[key,label], …]` — a second way to slice the SAME card, not a
+   second card.  It takes the slot `hint`/`estimated` would otherwise sit in,
+   because a card only ever needed one thing living at that end of its header,
+   and a switch that changes what the card shows outranks a caption about it.
+   Pairs with tabPanes() for the body: the card doesn't know what is inside
+   each pane, only how many there are and which one starts active. */
+const card = ({title,sub,hint,body,note,span=6,pad=true,ic,tone,est,tabs}) => `
+  <div class="card c${span}"${tabs?` data-active="${tabs[0][0]}"`:''}>
     ${title?`<div class="card-h">
       <hgroup><h3>${title}</h3>${sub?`<span class="csub">${sub}</span>`:''}</hgroup>
-      ${est&&D.estimated?`<span class="unfiltered">estimated</span>`
+      ${tabs?`<div class="card-tabs" role="tablist" aria-label="${title} view">${
+        tabs.map(([k,label],i)=>`<button type="button" class="card-tab${i===0?' on':''}"
+          role="tab" aria-selected="${i===0}" data-card-tab="${k}">${label}</button>`).join('')}</div>`
+      :est&&D.estimated?`<span class="unfiltered">estimated</span>`
         :hint?`<span class="hint">${hint}</span>`:''}
     </div>`:''}
     ${pad?`<div class="card-b">${body}</div>`:body}
     ${note?`<div class="card-note">${note}</div>`:''}
   </div>`;
+
+/* The panes `tabs:` switches between.  `panes` is `[[key,html], …]`, matched to
+   the tabs by key rather than by position — a delegated click handler (shell.js)
+   just sets `data-active` on the card and toggles `hidden` on whichever pane's
+   key does not match, so this only has to agree on the key, not the order. */
+const tabPanes = panes => panes.map(([k,html],i)=>
+  `<div class="card-pane" data-pane="${k}"${i===0?'':' hidden'}>${html}</div>`).join('');
 
 /* ============================================================================
    "WHAT YOU MIGHT MISS" — the first cell of the band, derived rather than authored
