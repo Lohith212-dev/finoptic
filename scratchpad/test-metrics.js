@@ -74,7 +74,7 @@ const sameSubject = (a,b) => { const B = new Set(words(b)); return words(a).some
   await wait(700);
 
   const fails = [], warns = [];
-  let renders = 0, tiles = 0, sparks = 0, bylines = 0;
+  let renders = 0, tiles = 0, sparks = 0, bylines = 0, curves = 0, segs = 0;
 
   for(const d of DS){
     await p.evaluate(id => { loadScenario(id); refresh(); }, d);
@@ -102,6 +102,12 @@ const sameSubject = (a,b) => { const B = new Set(words(b)); return words(a).some
                       const st=ps.find(x=>x.getAttribute('stroke'));
                       return st ? st.getAttribute('d') : ''; })()
           })),
+          /* Round 16: every interpolated stroke in the product carries .cline —
+             sparklines, trend lines, the forecast baseline.  Collected whole so the
+             no-overshoot check below covers the full-size plots too, not just the
+             76px ones.  Scoped by class rather than by `path[d*=C]` because vendor
+             brand marks are bezier paths and would flood it. */
+          curves: [...document.querySelectorAll('#screen .cline')].map(p => p.getAttribute('d')),
           flat: !!document.querySelector('.sum-flat'),
           tabs: document.querySelectorAll('.sum-tab').length,
           more: document.querySelectorAll('.sum-more').length,
@@ -166,6 +172,32 @@ const sameSubject = (a,b) => { const B = new Set(words(b)); return words(a).some
         }
       }
 
+      /* ---- 2b. NO CURVE MAY INVENT A VALUE, anywhere in the product ----
+         Same check as the per-tile one below, run over every `.cline` on the screen
+         so the full-size trend charts are covered by it as well.  A cubic Bezier is
+         contained in the convex hull of its four control points, so a control point
+         inside its segment's anchor range is sufficient to prove the curve never
+         leaves that range — which is the whole claim monotone interpolation makes. */
+      for(const d of r.curves){
+        curves++;
+        const seg = String(d||'').match(/C[^CLMZ]+/g) || [];
+        let y0 = parseFloat((String(d||'').match(/^M[\-\d.]+[\s,]+([\-\d.]+)/)||[])[1]);
+        if(!seg.length || Number.isNaN(y0)) continue;
+        segs += seg.length;
+        for(const c of seg){
+          const n = c.slice(1).trim().split(/[\s,]+/).map(Number);
+          if(n.length < 6 || n.some(Number.isNaN)) break;
+          const [,c1y,,c2y,,y1] = n;
+          const lo = Math.min(y0,y1) - 0.05, hi = Math.max(y0,y1) + 0.05;
+          if(c1y < lo || c1y > hi || c2y < lo || c2y > hi){
+            fails.push(`${tag}: a curve overshoots between two points`
+                     + ` — control ${c1y}/${c2y} outside ${lo.toFixed(1)}..${hi.toFixed(1)}`);
+            break;
+          }
+          y0 = y1;
+        }
+      }
+
       /* ---- 3. the band is a list of at most two ----
          The first column may hold two (two probes, two findings); the two authored
          columns hold one each since round 15.  Checked positionally because that is
@@ -194,6 +226,7 @@ const sameSubject = (a,b) => { const B = new Set(words(b)); return words(a).some
   }
 
   console.log(`${renders} renders · ${tiles} tiles · ${sparks} sparklines · ${bylines} YTD bylines`);
+  console.log(`${curves} interpolated lines · ${segs} curve segments checked for overshoot`);
   if(errs.length){ console.log('\nJS errors:'); errs.slice(0,10).forEach(e => console.log('  ' + e)); }
   if(fails.length){
     console.log(`\n${fails.length} failure(s):`);

@@ -134,7 +134,7 @@ function lineChart(series, labels, o={}){
        exactly where they were, so the chart still says which point is a month and
        which part is the line between two of them. */
     const d = smoothPath(pts);
-    g+=`<path d="${d}" fill="none" stroke="var(${s.color})" stroke-width="${s.w||1.75}" ${s.dash?`stroke-dasharray="4 3"`:''} stroke-linejoin="round"/>`;
+    g+=`<path class="cline" d="${d}" fill="none" stroke="var(${s.color})" stroke-width="${s.w||1.75}" ${s.dash?`stroke-dasharray="4 3"`:''} stroke-linejoin="round"/>`;
     if(s.dots) pts.forEach(p=>g+=`<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="var(--surface)" stroke="var(${s.color})" stroke-width="1.5"/>`);
   });
   /* One band per x-index, half a step either side of the point.  A trend chart
@@ -335,7 +335,7 @@ function sparkline(values, o={}){
         <stop offset="1" style="stop-color:var(${col});stop-opacity:0"/></linearGradient></defs>`
         + `<path d="${d} L${xy[xy.length-1][0].toFixed(1)} ${H} L${xy[0][0].toFixed(1)} ${H} Z" fill="url(#${id})"/>`;
     }
-    g += `<path d="${d}" fill="none" stroke="var(${col})" stroke-width="2.6"
+    g += `<path class="cline" d="${d}" fill="none" stroke="var(${col})" stroke-width="2.6"
             stroke-linejoin="round" stroke-linecap="round"/>`;
   }
   const last = xy[xy.length-1];
@@ -613,7 +613,7 @@ function bandChart(o){
     g+=`<path d="${smoothPath(U)} ${smoothPath(Dn.slice().reverse()).replace(/^M/,'L')} Z" fill="var(--c1)" opacity=".14"/>`;
   /* Dashed ghost line for the comparison series, neutral against the actual. */
   const line=(arr,col,dash)=>{const s=seg(arr);if(!s.length)return;
-    g+=`<path d="${smoothPath(s)}" fill="none" stroke="var(${col})" stroke-width="1.75" ${dash?'stroke-dasharray="4 3"':''}/>`};
+    g+=`<path class="cline" d="${smoothPath(s)}" fill="none" stroke="var(${col})" stroke-width="1.75" ${dash?'stroke-dasharray="4 3"':''}/>`};
   line(base,'--g4',true); line(act,'--c1',false);
   g+=`<line x1="${x(closed-1)}" x2="${x(closed-1)}" y1="${Tp}" y2="${H-B}" stroke="var(--line-2)"/>
       <text class="axis" x="${x(closed-1)+5}" y="${Tp+9}">forecast →</text>`;
