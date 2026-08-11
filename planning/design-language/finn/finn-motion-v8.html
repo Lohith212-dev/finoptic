@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finn — Motion v8 · rays from a pinned heart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#FAFAF9;--card:#FFF;--ink:#17171A;--ink-2:#5B5B63;--ink-3:#9A9AA2;
+  --line:#E7E7E4;--brand:#FF5600;--dark:#141416;--spring:cubic-bezier(.3,1.3,.35,1);}
+*{margin:0;padding:0;box-sizing:border-box;}html{-webkit-font-smoothing:antialiased;}
+body{background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;
+  font-size:14px;line-height:1.55;padding:44px 40px 64px;}
+.wrap{max-width:1160px;margin:0 auto;}
+.eyebrow{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--brand);margin-bottom:10px;}
+h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,3vw,34px);font-weight:600;letter-spacing:-.02em;}
+.sub{color:var(--ink-2);max-width:64ch;margin-top:10px;}
+.cols{display:grid;grid-template-columns:1.05fr .95fr;gap:22px;margin-top:36px;align-items:start;}
+@media(max-width:900px){.cols{grid-template-columns:1fr;}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+.stagebig{height:300px;display:flex;align-items:center;justify-content:center;
+  border-bottom:1px solid var(--line);background:radial-gradient(circle at 50% 46%,#FFF 0%,#FBFBFA 72%);}
+.stagebig svg{overflow:visible;}
+.statebar{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line);}
+.dotlive{width:7px;height:7px;border-radius:50%;background:var(--brand);}
+#stateName{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;}
+#stateDesc{color:var(--ink-2);font-size:13px;}
+.controls{padding:18px 20px;display:flex;flex-wrap:wrap;gap:8px;}
+button.st{font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:500;padding:8px 14px;
+  border:1px solid var(--line);background:var(--card);border-radius:999px;cursor:pointer;color:var(--ink);}
+button.st:hover{border-color:var(--ink-3);}
+button.st.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.rules{padding:18px 20px;border-top:1px solid var(--line);color:var(--ink-2);font-size:13px;}
+.rules b{color:var(--ink);font-weight:500;}
+.chat{display:flex;flex-direction:column;height:560px;}
+.chathead{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);}
+.chathead .finn{width:26px;height:23px;}
+.chathead b{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;}
+.chathead span{color:var(--ink-3);font-size:12px;margin-left:auto;}
+.msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;}
+.msg{max-width:82%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.5;}
+.msg.user{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:4px;}
+.msg.finnm{align-self:flex-start;background:#F4F3F1;border-bottom-left-radius:4px;}
+.msgrow{display:flex;gap:8px;align-items:flex-end;}
+.msgrow .finn{width:22px;height:19px;flex:0 0 22px;margin-bottom:2px;}
+.inputrow{display:flex;gap:10px;padding:14px 16px;border-top:1px solid var(--line);}
+.inputrow input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 14px;
+  font-family:'Inter',sans-serif;font-size:13.5px;outline:none;background:var(--paper);}
+.inputrow input:focus{border-color:var(--ink-3);}
+.inputrow button{border:0;background:var(--brand);color:#fff;border-radius:10px;padding:0 16px;
+  font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;}
+
+/* ============ FINN MOTION SYSTEM v8 ============
+   All states except thinking are v6's, untouched. Thinking is a
+   radiation in the literal sense: the legs were REDRAWN into local
+   axis frames anchored at their shared apex (56,48) with mirrored
+   axes ±25° from vertical, so every limb now telescopes along its
+   own length — thickness constant — in and out of the pinned hub,
+   exactly like rays shortening and springing back from a fixed core.
+   Resting silhouette is pixel-identical to v6 (verified by diff). */
+.finn .creature{transform-origin:56px 48.5px;transform-box:view-box;
+  transition:transform .55s var(--spring);}
+.finn .ges{transform-box:fill-box;transform-origin:center 90%;transition:transform .5s var(--spring);}
+.finn .eyeI.blink{transform:scaleY(.12);transition-duration:.09s;}
+
+body.docked .finn .creature{animation:none;}
+
+/* IDLE — small, slow */
+body.idle .finn .creature{animation:breath 5.2s cubic-bezier(.45,0,.55,1) infinite;}
+@keyframes breath{0%,100%{transform:scale(1);}42%{transform:scale(1.03);}74%{transform:scale(1.01);}}
+
+/* LISTENING — grown toward you, held */
+body.listening .finn .creature{transform:scale(1.06);}
+
+/* ============ THINKING — the rays ============
+   ALL TUNABLE NUMBERS LIVE HERE:
+   --think-tempo   : one full gather-and-spring cycle
+   --think-depth   : limb length at full retraction (1 = rest length)
+   --think-stagger : how long the legs lag behind the arms (the ripple).
+                     Staggered in symmetric PAIRS — arms together, legs
+                     together — so the ripple never lurches left/right.
+   --eye-depth     : eye size at deepest gather (alive, not co-scaling)
+   --eye-dip       : eye sink toward the hub at deepest gather (viewBox units) */
+:root{--think-tempo:1.7s;--think-depth:.45;--think-stagger:.22s;--eye-depth:.93;--eye-dip:1.4px;}
+
+/* pivots — arms telescope from the hub edges (symmetric about x=56);
+   legs telescope along their own mirrored axes about the apex, which is
+   the local origin (0,0) of their redrawn frames */
+.finn .limb{transform-box:view-box;transition:transform .5s var(--spring);}
+.finn .armL{transform-origin:47px 42.2px;}
+.finn .armR{transform-origin:65px 42.2px;}
+.finn .legRay{transform-origin:0px 0px;}
+.finn .eyeOrb{transform-box:fill-box;transform-origin:center;transition:transform .5s var(--spring);}
+
+/* one keyframe for all four limbs: quick gather, springy release with
+   overshoot past rest — the "spring out". Legs join one beat later. */
+body.thinking .finn .limb{animation:ray var(--think-tempo) infinite;}
+body.thinking .finn .legRay{animation-delay:var(--think-stagger);}
+@keyframes ray{
+  0%{transform:scale(1,1);animation-timing-function:cubic-bezier(.55,0,.75,.4);}
+  45%{transform:scale(var(--think-depth),1);animation-timing-function:var(--spring);}
+  100%{transform:scale(1,1);}}
+body.thinking .finn .eyeOrb{animation:eyelife var(--think-tempo) infinite;}
+@keyframes eyelife{
+  0%{transform:translateY(0) scale(1);animation-timing-function:cubic-bezier(.55,0,.75,.4);}
+  45%{transform:translateY(var(--eye-dip)) scale(var(--eye-depth));animation-timing-function:var(--spring);}
+  100%{transform:translateY(0) scale(1);}}
+/* the hub has no thinking rule at all — it is the pinned heart */
+
+/* SPEAKING — quick shallow pulse */
+body.speaking .finn .creature{animation:speak 1.1s ease-in-out infinite;}
+@keyframes speak{0%,100%{transform:scale(1.01);}50%{transform:scale(1.04);}}
+
+/* SETTLE — one overshoot, home */
+body.settle .finn .creature{animation:settle .7s var(--spring) 1;}
+@keyframes settle{0%{transform:scale(1.03);}45%{transform:scale(1.07);}100%{transform:scale(1);}}
+
+/* ALERT — one pulse */
+body.alert .finn .creature{animation:alertp .9s ease-in-out 1;}
+@keyframes alertp{0%,100%{transform:scale(1);}40%{transform:scale(1.07);}}
+
+/* SUMMON — springs up from its center */
+body.summon .finn .creature{animation:sum .65s var(--spring) 1;}
+@keyframes sum{0%{transform:scale(.25);opacity:0;}45%{opacity:1;}100%{transform:scale(1);opacity:1;}}
+
+@media (prefers-reduced-motion:reduce){.finn *{animation:none!important;transition:none!important;}}
+</style></head>
+<body class="idle">
+<div class="wrap">
+<header>
+  <div class="eyebrow">Finn · motion system · v8</div>
+  <h1>Rays from a pinned heart</h1>
+  <p class="sub">The legs were redrawn into their own axis frames — mirrored ±25° from vertical,
+  anchored at the shared apex — so every limb now telescopes along its own length, thickness
+  constant, in and out of a hub that never moves. Arms gather first, legs follow one beat later,
+  and everything springs back out past rest before settling. The resting silhouette is
+  pixel-identical to v6; every other state is untouched.</p>
+</header>
+
+<div class="cols">
+  <div class="panel">
+    <div class="stagebig"><svg width="230" height="199" viewBox="0 0 112 97" class="finn"><g class="creature"><g class="limb armL"><path d="M23.0 28.9 L48.2 29.55 L48.2 47.5 L23.2 47.3 Z" transform="translate(-0.10 4)" fill="#FF5600"/></g><path d="M46.5 29.5 L64.0 29.0 L64.0 46.4 L46.5 47.5 Z" transform="translate(-0.10 4)" fill="#FF5600"/><g class="limb armR"><path d="M62.5 29.05 L88.8 27.2 L89.2 45.9 L62.5 46.35 Z" transform="translate(-0.10 4)" fill="#FF5600"/></g><g transform="translate(56 48) rotate(115.023)"><g class="limb legRay"><path d="M1.414 3.028 L-1.414 -3.028 L8.411 -5.624 L40.337 -4.135 C43.319 -3.185 46.255 -2.096 49.191 -1.008 C47.316 4.668 45.394 10.717 43.339 16.243 C39.996 14.993 36.564 13.551 33.312 12.259 Z" fill="#FF5600"/></g></g><g transform="translate(56 48) rotate(64.977)"><g class="limb legRay"><path d="M-1.764 2.598 L0.858 -3.021 L31.778 -12.756 C35.004 -14.229 38.182 -15.836 41.324 -17.128 C43.788 -12.005 46.313 -6.302 48.692 -0.998 C45.998 0.283 43.164 1.388 40.283 2.36 L8.953 5.172 Z" fill="#FF5600"/></g></g><g class="eyeOrb"><g class="ges eyeI"><path d="M34.2566 0H48.0473V9.00225C48.0473 11.6468 45.9034 13.7907 43.2588 13.7907H34.2566V0Z" transform="translate(2.96 4)" fill="black"/></g></g><g class="eyeOrb"><g class="ges eyeI"><path d="M58.0366 0H71.8273V13.7907H62.825C60.1805 13.7907 58.0366 11.6468 58.0366 9.00224V0Z" transform="translate(2.96 4)" fill="black"/></g></g></g></svg></div>
+    <div class="statebar"><span class="dotlive"></span><span id="stateName">Idle</span>
+      <span id="stateDesc">Resting breath, with the occasional blink.</span></div>
+    <div class="controls">
+      <button class="st" data-s="docked">Docked</button>
+      <button class="st" data-s="alert">Alert</button>
+      <button class="st" data-s="summon">Summon</button>
+      <button class="st on" data-s="idle">Idle</button>
+      <button class="st" data-s="listening">Listening</button>
+      <button class="st" data-s="thinking">Thinking</button>
+      <button class="st" data-s="speaking">Speaking</button>
+      <button class="st" data-s="settle">Settle</button>
+    </div>
+    <div class="rules">
+      <b>Thinking</b>: limbs retract into the pinned hub along their own axes and spring back
+      out with an overshoot — arms lead, legs follow. Tunables in the single <b>THINKING</b> CSS
+      block: depth 0.45 · tempo 1.7&nbsp;s · stagger 0.22&nbsp;s · eye depth 0.93 · eye dip 1.4.
+      Set stagger to 0 for a fully synchronized wave.
+    </div>
+  </div>
+
+  <div class="panel chat">
+    <div class="chathead"><svg width="24" height="20" viewBox="0 0 112 97" class="finn"><g class="creature"><g class="limb armL"><path d="M23.0 28.9 L48.2 29.55 L48.2 47.5 L23.2 47.3 Z" transform="translate(-0.10 4)" fill="#FF5600"/></g><path d="M46.5 29.5 L64.0 29.0 L64.0 46.4 L46.5 47.5 Z" transform="translate(-0.10 4)" fill="#FF5600"/><g class="limb armR"><path d="M62.5 29.05 L88.8 27.2 L89.2 45.9 L62.5 46.35 Z" transform="translate(-0.10 4)" fill="#FF5600"/></g><g transform="translate(56 48) rotate(115.023)"><g class="limb legRay"><path d="M1.414 3.028 L-1.414 -3.028 L8.411 -5.624 L40.337 -4.135 C43.319 -3.185 46.255 -2.096 49.191 -1.008 C47.316 4.668 45.394 10.717 43.339 16.243 C39.996 14.993 36.564 13.551 33.312 12.259 Z" fill="#FF5600"/></g></g><g transform="translate(56 48) rotate(64.977)"><g class="limb legRay"><path d="M-1.764 2.598 L0.858 -3.021 L31.778 -12.756 C35.004 -14.229 38.182 -15.836 41.324 -17.128 C43.788 -12.005 46.313 -6.302 48.692 -0.998 C45.998 0.283 43.164 1.388 40.283 2.36 L8.953 5.172 Z" fill="#FF5600"/></g></g><g class="eyeOrb"><g class="ges eyeI"><path d="M34.2566 0H48.0473V9.00225C48.0473 11.6468 45.9034 13.7907 43.2588 13.7907H34.2566V0Z" transform="translate(2.96 4)" fill="black"/></g></g><g class="eyeOrb"><g class="ges eyeI"><path d="M58.0366 0H71.8273V13.7907H62.825C60.1805 13.7907 58.0366 11.6468 58.0366 9.00224V0Z" transform="translate(2.96 4)" fill="black"/></g></g></g></svg><b>Finn</b><span id="chatstate">idle</span></div>
+    <div class="msgs" id="msgs">
+      <div class="msgrow"><svg width="24" height="20" viewBox="0 0 112 97" class="finn"><g class="creature"><g class="limb armL"><path d="M23.0 28.9 L48.2 29.55 L48.2 47.5 L23.2 47.3 Z" transform="translate(-0.10 4)" fill="#FF5600"/></g><path d="M46.5 29.5 L64.0 29.0 L64.0 46.4 L46.5 47.5 Z" transform="translate(-0.10 4)" fill="#FF5600"/><g class="limb armR"><path d="M62.5 29.05 L88.8 27.2 L89.2 45.9 L62.5 46.35 Z" transform="translate(-0.10 4)" fill="#FF5600"/></g><g transform="translate(56 48) rotate(115.023)"><g class="limb legRay"><path d="M1.414 3.028 L-1.414 -3.028 L8.411 -5.624 L40.337 -4.135 C43.319 -3.185 46.255 -2.096 49.191 -1.008 C47.316 4.668 45.394 10.717 43.339 16.243 C39.996 14.993 36.564 13.551 33.312 12.259 Z" fill="#FF5600"/></g></g><g transform="translate(56 48) rotate(64.977)"><g class="limb legRay"><path d="M-1.764 2.598 L0.858 -3.021 L31.778 -12.756 C35.004 -14.229 38.182 -15.836 41.324 -17.128 C43.788 -12.005 46.313 -6.302 48.692 -0.998 C45.998 0.283 43.164 1.388 40.283 2.36 L8.953 5.172 Z" fill="#FF5600"/></g></g><g class="eyeOrb"><g class="ges eyeI"><path d="M34.2566 0H48.0473V9.00225C48.0473 11.6468 45.9034 13.7907 43.2588 13.7907H34.2566V0Z" transform="translate(2.96 4)" fill="black"/></g></g><g class="eyeOrb"><g class="ges eyeI"><path d="M58.0366 0H71.8273V13.7907H62.825C60.1805 13.7907 58.0366 11.6468 58.0366 9.00224V0Z" transform="translate(2.96 4)" fill="black"/></g></g></g></svg><div class="msg finnm">Hi — ask me anything about this month's cloud spend.</div></div>
+    </div>
+    <div class="inputrow">
+      <input id="inp" type="text" placeholder="e.g. Why did EC2 spend jump last week?" autocomplete="off">
+      <button id="send">Ask</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+const body=document.body;
+const stateName=document.getElementById('stateName');
+const stateDesc=document.getElementById('stateDesc');
+const chatstate=document.getElementById('chatstate');
+const DESC={docked:'Frozen. Stillness is respect inside a dashboard.',
+  alert:'One pulse, once — a tap on the shoulder.',
+  summon:'Springs up from its own center.',
+  idle:'Resting breath, with the occasional blink.',
+  listening:'Grown toward you and held; eyes on you.',
+  thinking:'The rays — limbs retract into the pinned hub and spring back out, arms then legs.',
+  speaking:'Quick shallow pulse at speech rhythm.',
+  settle:'One overshoot, then home. The full stop.'};
+const STATES=['docked','alert','summon','idle','listening','thinking','speaking','settle'];
+let current='idle';
+function setState(s){
+  STATES.forEach(x=>body.classList.remove(x));
+  body.classList.add(s);current=s;
+  stateName.textContent=s.charAt(0).toUpperCase()+s.slice(1);
+  stateDesc.textContent=DESC[s];chatstate.textContent=s;
+  document.querySelectorAll('button.st').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  if(s==='alert')setTimeout(()=>{if(current==='alert')setState('docked');},950);
+  if(s==='summon')setTimeout(()=>{if(current==='summon')setState('idle');},700);
+  if(s==='settle')setTimeout(()=>{if(current==='settle')setState('idle');},750);
+}
+document.querySelectorAll('button.st').forEach(b=>b.onclick=()=>setState(b.dataset.s));
+function scheduleBlink(){
+  setTimeout(()=>{
+    if(current!=='docked'&&current!=='thinking'){
+      document.querySelectorAll('.eyeI').forEach(e=>e.classList.add('blink'));
+      setTimeout(()=>document.querySelectorAll('.eyeI').forEach(e=>e.classList.remove('blink')),110);
+    }
+    scheduleBlink();
+  },3800+Math.random()*3400);
+}
+scheduleBlink();
+const inp=document.getElementById('inp'),send=document.getElementById('send'),msgs=document.getElementById('msgs');
+let typeTimer=null;
+inp.addEventListener('input',()=>{
+  if(current==='idle'||current==='listening'){
+    setState('listening');clearTimeout(typeTimer);
+    typeTimer=setTimeout(()=>{if(current==='listening')setState('idle');},1100);
+  }});
+const SMALL_MARK="<svg width=\"24\" height=\"20\" viewBox=\"0 0 112 97\" class=\"finn\"><g class=\"creature\"><g class=\"limb armL\"><path d=\"M23.0 28.9 L48.2 29.55 L48.2 47.5 L23.2 47.3 Z\" transform=\"translate(-0.10 4)\" fill=\"#FF5600\"/></g><path d=\"M46.5 29.5 L64.0 29.0 L64.0 46.4 L46.5 47.5 Z\" transform=\"translate(-0.10 4)\" fill=\"#FF5600\"/><g class=\"limb armR\"><path d=\"M62.5 29.05 L88.8 27.2 L89.2 45.9 L62.5 46.35 Z\" transform=\"translate(-0.10 4)\" fill=\"#FF5600\"/></g><g transform=\"translate(56 48) rotate(115.023)\"><g class=\"limb legRay\"><path d=\"M1.414 3.028 L-1.414 -3.028 L8.411 -5.624 L40.337 -4.135 C43.319 -3.185 46.255 -2.096 49.191 -1.008 C47.316 4.668 45.394 10.717 43.339 16.243 C39.996 14.993 36.564 13.551 33.312 12.259 Z\" fill=\"#FF5600\"/></g></g><g transform=\"translate(56 48) rotate(64.977)\"><g class=\"limb legRay\"><path d=\"M-1.764 2.598 L0.858 -3.021 L31.778 -12.756 C35.004 -14.229 38.182 -15.836 41.324 -17.128 C43.788 -12.005 46.313 -6.302 48.692 -0.998 C45.998 0.283 43.164 1.388 40.283 2.36 L8.953 5.172 Z\" fill=\"#FF5600\"/></g></g><g class=\"eyeOrb\"><g class=\"ges eyeI\"><path d=\"M34.2566 0H48.0473V9.00225C48.0473 11.6468 45.9034 13.7907 43.2588 13.7907H34.2566V0Z\" transform=\"translate(2.96 4)\" fill=\"black\"/></g></g><g class=\"eyeOrb\"><g class=\"ges eyeI\"><path d=\"M58.0366 0H71.8273V13.7907H62.825C60.1805 13.7907 58.0366 11.6468 58.0366 9.00224V0Z\" transform=\"translate(2.96 4)\" fill=\"black\"/></g></g></g></svg>";
+const REPLY="EC2 spend rose 31% week-over-week, almost entirely from the analytics cluster: "+
+"an autoscaling change on Jul 22 raised the max instance count from 12 to 30, and average "+
+"utilization on the new nodes is only 34%. Capping max at 18 would have absorbed the same "+
+"load — projected saving is about $6.2k per week. Want the utilization breakdown per node?";
+function addUser(t){const d=document.createElement('div');d.className='msg user';d.textContent=t;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;}
+function ask(){
+  const t=inp.value.trim();if(!t)return;
+  clearTimeout(typeTimer);inp.value='';addUser(t);
+  setState('thinking');
+  setTimeout(()=>{
+    setState('speaking');
+    const row=document.createElement('div');row.className='msgrow';
+    row.innerHTML=SMALL_MARK+'<div class="msg finnm"></div>';
+    msgs.appendChild(row);
+    const bubble=row.querySelector('.finnm');
+    const words=REPLY.split(' ');let i=0;
+    const iv=setInterval(()=>{
+      bubble.textContent+=(i?' ':'')+words[i];i++;msgs.scrollTop=msgs.scrollHeight;
+      if(i>=words.length){clearInterval(iv);setState('settle');}
+    },46);
+  },3200+Math.random()*1200);
+}
+send.onclick=ask;
+inp.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
+})();
+</script>
+</body></html>

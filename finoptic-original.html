@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meridian — Technology Financial Management</title>
+<style>
+:root{
+  --paper:#FAFAFB; --surface:#FFFFFF; --surface-2:#F5F6F8;
+  --ink:#0F1219; --ink-2:#565D6B; --ink-3:#8B929E; --ink-4:#B4BAC4;
+  --line:#E6E8ED; --line-2:#D2D6DE;
+  --pos:#15734A; --pos-bg:#EAF3EE;
+  --neg:#A82F1C; --neg-bg:#FBEDEA;
+  --warn:#8A5D06; --warn-bg:#FBF3E4;
+  --info:#2B457F; --info-bg:#EDF0F7;
+  --g1:#0F1219; --g2:#333A47; --g3:#565D6B; --g4:#7C838F;
+  --g5:#A2A8B3; --g6:#C2C7D0; --g7:#DDE0E6; --g8:#EEF0F3;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  --nav:248px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:13px; line-height:1.45; -webkit-font-smoothing:antialiased;
+}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+button{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--info); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- shell ---------- */
+.app{display:flex; min-height:100vh; max-width:1440px; margin:0 auto; background:var(--paper);
+  border-left:1px solid var(--line); border-right:1px solid var(--line)}
+.nav{
+  width:var(--nav); flex:0 0 var(--nav); background:var(--surface);
+  border-right:1px solid var(--line); position:sticky; top:0; height:100vh;
+  overflow-y:auto; display:flex; flex-direction:column;
+}
+.brand{padding:20px 20px 16px; border-bottom:1px solid var(--line)}
+.brand-mark{display:flex; align-items:center; gap:9px}
+.brand-glyph{
+  width:22px;height:22px;border:1.5px solid var(--ink);border-radius:3px;
+  display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600
+}
+.brand-name{font-size:14px; font-weight:640; letter-spacing:-.02em}
+.brand-sub{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-top:7px}
+
+.persona{padding:12px 14px; border-bottom:1px solid var(--line)}
+.persona-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;padding-left:6px}
+.persona select{
+  width:100%; padding:7px 8px; border:1px solid var(--line-2); border-radius:5px;
+  background:var(--surface); font-size:12.5px; color:var(--ink); font-family:var(--sans);
+}
+.navgroups{padding:10px 8px 24px; flex:1}
+.navgroup-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);padding:12px 12px 6px}
+.navlink{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  padding:6px 12px; border:0; background:none; border-radius:5px; cursor:pointer;
+  color:var(--ink-2); font-size:12.5px; letter-spacing:-.005em;
+}
+.navlink:hover{background:var(--surface-2); color:var(--ink)}
+.navlink.on{background:var(--ink); color:#fff}
+.navlink.on .navdot{background:#fff}
+.navdot{width:4px;height:4px;border-radius:50%;background:var(--ink-4);flex:0 0 4px}
+.navlink .kbd{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--ink-4)}
+.navlink.on .kbd{color:rgba(255,255,255,.55)}
+
+.main{flex:1; min-width:0}
+
+/* ---------- topbar + filters ---------- */
+.topbar{
+  position:sticky; top:0; z-index:20; background:rgba(250,250,251,.92);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+}
+.topbar-row{display:flex; align-items:center; gap:12px; padding:14px 28px 12px}
+.crumbs{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); letter-spacing:.02em}
+.crumbs b{color:var(--ink); font-weight:600}
+.crumbs span{color:var(--ink-4); margin:0 5px}
+.topbar-actions{margin-left:auto; display:flex; gap:8px}
+.btn{
+  padding:6px 11px; border:1px solid var(--line-2); background:var(--surface);
+  border-radius:5px; font-size:12px; cursor:pointer; color:var(--ink-2);
+}
+.btn:hover{border-color:var(--ink-3); color:var(--ink)}
+.btn.pri{background:var(--ink); color:#fff; border-color:var(--ink)}
+.filters{display:flex; gap:6px; padding:0 28px 12px; flex-wrap:wrap; align-items:center}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 9px;
+  border:1px solid var(--line-2); border-radius:20px; background:var(--surface);
+  font-size:11.5px; color:var(--ink-2); cursor:pointer; white-space:nowrap;
+}
+.chip:hover{border-color:var(--ink-3)}
+.chip em{font-style:normal; color:var(--ink-4); font-family:var(--mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase}
+.chip.set{border-color:var(--ink); color:var(--ink); background:var(--surface-2)}
+.chip .x{color:var(--ink-4)}
+
+/* ---------- signature: reconciliation ledger strip ---------- */
+.ledger{
+  display:flex; align-items:stretch; border-bottom:1px solid var(--line);
+  background:var(--surface); overflow-x:auto; scrollbar-width:none;
+}
+.ledger::-webkit-scrollbar{display:none}
+.ledger-cell{
+  padding:10px 18px; border-right:1px solid var(--line); display:flex;
+  flex-direction:column; gap:2px; min-width:0;
+}
+.ledger-cell:last-child{border-right:0; margin-left:auto; text-align:right}
+.ledger-k{font-family:var(--mono); font-size:9px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3)}
+.ledger-v{font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.ledger-op{
+  display:grid; place-items:center; padding:0 4px; color:var(--ink-4);
+  font-family:var(--mono); font-size:13px; border-right:1px solid var(--line);
+}
+
+/* ---------- content grid ---------- */
+.content{padding:22px 28px 64px}
+.grid{display:grid; grid-template-columns:repeat(12,1fr); gap:12px}
+.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}
+.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}
+.c8{grid-column:span 8}.c9{grid-column:span 9}.c12{grid-column:span 12}
+
+.pagehead{margin-bottom:18px; display:flex; align-items:flex-end; gap:16px}
+.pagehead h1{font-size:20px; font-weight:640; letter-spacing:-.03em; margin:0}
+.pagehead p{margin:3px 0 0; color:var(--ink-2); font-size:12.5px; max-width:62ch}
+.pagehead .persona-tag{
+  margin-left:auto; font-family:var(--mono); font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-2); border:1px solid var(--line-2);
+  padding:4px 8px; border-radius:4px; background:var(--surface); white-space:nowrap;
+}
+
+/* ---------- cards ---------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:7px; overflow:hidden}
+.card-h{padding:12px 14px 0; display:flex; align-items:baseline; gap:8px}
+.card-h h3{margin:0; font-size:12.5px; font-weight:620; letter-spacing:-.01em}
+.card-h .hint{font-size:11px; color:var(--ink-3); margin-left:auto; font-family:var(--mono); font-size:10px}
+.card-b{padding:12px 14px 14px}
+.card-note{
+  padding:9px 14px; border-top:1px solid var(--line); background:var(--surface-2);
+  font-size:11.5px; color:var(--ink-2);
+}
+.card-note b{color:var(--ink); font-weight:600}
+
+/* KPI */
+.kpi{grid-column:span 3; background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:11px 13px 12px}
+.kpi-k{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:6px}
+.kpi-v{font-family:var(--mono); font-size:21px; font-weight:600; letter-spacing:-.045em; display:block; line-height:1.1}
+.kpi-f{display:flex; align-items:center; gap:6px; margin-top:6px; font-size:11px; color:var(--ink-3)}
+.kpi.hero .kpi-v{font-size:30px}
+.kpi.hero{grid-column:span 3}
+
+.delta{font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:-.01em}
+.delta.up{color:var(--neg)} .delta.down{color:var(--pos)}
+.delta.gup{color:var(--pos)} .delta.gdown{color:var(--neg)}
+.delta.flat{color:var(--ink-3)}
+
+.badge{
+  display:inline-flex; align-items:center; gap:5px; padding:2px 7px; border-radius:4px;
+  font-size:10.5px; font-weight:560; font-family:var(--mono); letter-spacing:.01em; white-space:nowrap;
+}
+.badge.crit{background:var(--neg-bg); color:var(--neg)}
+.badge.high{background:var(--warn-bg); color:var(--warn)}
+.badge.med{background:var(--info-bg); color:var(--info)}
+.badge.low{background:var(--surface-2); color:var(--ink-3)}
+.badge.ok{background:var(--pos-bg); color:var(--pos)}
+.badge.n{background:var(--surface-2); color:var(--ink-2)}
+
+/* ---------- tables ---------- */
+table{width:100%; border-collapse:collapse; font-size:12px}
+thead th{
+  text-align:left; font-family:var(--mono); font-size:9px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:500;
+  padding:8px 10px; border-bottom:1px solid var(--line-2); white-space:nowrap;
+}
+tbody td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+.r{text-align:right}
+td.r,th.r{font-family:var(--mono); font-variant-numeric:tabular-nums}
+th.r{font-family:var(--mono)}
+td.mono{font-family:var(--mono); font-size:11.5px}
+tr.total td{border-top:1px solid var(--line-2); font-weight:640; background:var(--surface-2)}
+.tbl-scroll{overflow-x:auto}
+.sub{color:var(--ink-3); font-size:11px}
+.namecell{display:flex; flex-direction:column; gap:1px}
+.namecell b{font-weight:580}
+
+/* meters */
+.meter{height:5px; background:var(--surface-2); border-radius:3px; overflow:hidden; min-width:52px}
+.meter i{display:block; height:100%; background:var(--g3)}
+.meter.good i{background:var(--pos)} .meter.bad i{background:var(--neg)} .meter.warn i{background:var(--warn)}
+.util{display:flex; align-items:center; gap:8px; justify-content:flex-end}
+.util .num{font-size:11px; min-width:34px; text-align:right}
+
+/* legend */
+.legend{display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:10px}
+.legend div{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-2)}
+.legend i{width:8px; height:8px; border-radius:2px; flex:0 0 8px}
+.legend b{margin-left:auto; font-family:var(--mono); color:var(--ink); font-weight:560; font-size:11px}
+.legend.rows{flex-direction:column; gap:5px}
+.legend.rows div{width:100%}
+
+/* insight strip */
+.insight{
+  display:flex; gap:12px; align-items:flex-start; padding:11px 13px;
+  border:1px solid var(--line); border-left:2px solid var(--ink); border-radius:6px;
+  background:var(--surface);
+}
+.insight .q{font-family:var(--mono); font-size:9px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); white-space:nowrap; padding-top:2px}
+.insight p{margin:0; font-size:12.5px; color:var(--ink-2)}
+.insight p b{color:var(--ink); font-weight:600}
+.insight.act{border-left-color:var(--pos)}
+.insight.warn{border-left-color:var(--warn)}
+.insight.crit{border-left-color:var(--neg)}
+
+/* drill path */
+.path{display:flex; flex-wrap:wrap; align-items:center; gap:0; font-family:var(--mono); font-size:11px}
+.path button{
+  border:0; background:none; padding:4px 8px; cursor:pointer; color:var(--ink-2);
+  border-radius:4px;
+}
+.path button:hover{background:var(--surface-2); color:var(--ink)}
+.path button.on{background:var(--ink); color:#fff}
+.path .sep{color:var(--ink-4); padding:0 1px}
+
+/* list rows */
+.rows{display:flex; flex-direction:column}
+.row{display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.row .grow{flex:1; min-width:0}
+.row .t{font-size:12.5px; font-weight:560}
+.row .d{font-size:11.5px; color:var(--ink-3); margin-top:1px}
+.row .v{font-family:var(--mono); font-size:13px; font-weight:600; text-align:right; white-space:nowrap}
+
+svg{display:block; max-width:100%}
+.axis{font-family:var(--mono); font-size:9px; fill:var(--ink-3)}
+.gridline{stroke:var(--line); stroke-width:1}
+.zeroline{stroke:var(--line-2); stroke-width:1}
+
+@media (max-width:1100px){
+  :root{--nav:60px}
+  .brand-name,.brand-sub,.navlink span:not(.navdot),.persona,.navgroup-label{display:none}
+  .navlink{justify-content:center}
+  .c3,.c4,.c5,.c6,.c7,.c8,.c9{grid-column:span 12}
+  .kpi.hero{grid-column:span 12}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="nav">
+    <div class="brand">
+      <div class="brand-mark">
+        <div class="brand-glyph">M</div>
+        <div class="brand-name">Meridian</div>
+      </div>
+      <div class="brand-sub">Technology Financial Management</div>
+    </div>
+    <div class="persona">
+      <div class="persona-label">Viewing as</div>
+      <select id="persona" aria-label="Persona">
+        <option value="itfm">IT Financial Management</option>
+        <option value="finance">Finance</option>
+        <option value="proc">Procurement</option>
+        <option value="biz">Business / Product</option>
+      </select>
+    </div>
+    <div class="navgroups" id="navgroups"></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="crumbs" id="crumbs"></div>
+        <div class="topbar-actions">
+          <button class="btn">Export</button>
+          <button class="btn pri">Share view</button>
+        </div>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div class="ledger" id="ledger"></div>
+    </div>
+    <main class="content" id="screen"></main>
+  </div>
+</div>
+<script>
+/* ============================================================
+   ONE dataset. Every screen reads from here. All $ in thousands.
+   Fiscal year: Aug 2025 – Jul 2026. Reporting date: 28 Jul 2026.
+   YTD = 11 closed months (Aug–Jun). July is forecast.
+   ============================================================ */
+const D = {
+  meta:{ asOf:'28 Jul 2026', fy:'FY26', months:['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'],
+         closed:11, employees:50, customers:148, vendors:34 },
+
+  /* headline — ytdActual = sum(trend.actual), tie checked at load */
+  ytdActual:1620, ytdBudget:1500, fyBudget:1640, fyForecast:1780,
+  identified:214, realized:96, unallocated:87,
+
+  trend:{
+    actual:[128,134,141,147,139,152,146,158,151,162,162,null],
+    budget:[128,130,132,134,136,138,140,142,142,138,140,140],
+    forecast:[null,null,null,null,null,null,null,null,null,null,162,160]
+  },
+
+  categories:[
+    {k:'Cloud infrastructure',v:645,g:'--g1'},{k:'SaaS & licences',v:291,g:'--g3'},
+    {k:'AI & LLM',v:218,g:'--g2'},{k:'Security',v:197,g:'--g4'},
+    {k:'Observability',v:99,g:'--g5'},{k:'Other technology',v:66,g:'--g6'},
+    {k:'ITSM',v:57,g:'--g7'},{k:'Device management',v:47,g:'--g8'}
+  ],
+
+  cloud:{
+    total:645,
+    providers:[
+      {k:'AWS',v:297,m:[24,25,26,27,25,28,26,29,27,30,30]},
+      {k:'Microsoft Azure',v:230,m:[18,19,20,21,19,22,20,22,21,24,24]},
+      {k:'Google Cloud',v:118,m:[9,10,10,11,10,11,10,11,11,12,13]}
+    ],
+    services:[{k:'Compute',v:214},{k:'Database',v:121},{k:'Storage',v:88},{k:'Kubernetes',v:79},
+              {k:'Networking',v:54},{k:'AI services',v:33},{k:'Serverless',v:31},{k:'Monitoring',v:25}],
+    envs:[{k:'Production',v:402},{k:'Development',v:118},{k:'Testing',v:61},{k:'Staging',v:42},{k:'Sandbox',v:22}],
+    coverage:58, coverageTarget:85
+  },
+
+  ai:{
+    total:218, sub:134, api:84,
+    m:[13,14,15,17,16,19,18,21,20,32,33],
+    providers:[
+      {k:'OpenAI',v:64,sub:38,api:26},{k:'Anthropic',v:43,sub:22,api:21},
+      {k:'Microsoft 365 Copilot',v:39,sub:39,api:0},{k:'Azure OpenAI',v:32,sub:0,api:32},
+      {k:'Google Gemini',v:20,sub:15,api:5},{k:'Perplexity',v:12,sub:12,api:0},
+      {k:'GitHub Copilot',v:8,sub:8,api:0}
+    ],
+    tokens:{input:1420, output:214, cached:486, requests:6.2, avgPerReq:264, per1M:51.4, perReq:0.0135},
+    byProduct:[{k:'Product Alpha',v:61},{k:'Product Beta',v:54},{k:'Product Gamma',v:38},
+               {k:'Product Delta',v:19},{k:'Internal productivity',v:46}],
+    models:[
+      {m:'GPT-4.1 (Azure)',p:'Azure OpenAI',req:'1.62M',tok:'380M',cost:26,avg:0.0160,use:'Gamma classification pipeline'},
+      {m:'GPT-5',p:'OpenAI',req:'0.71M',tok:'270M',cost:26,avg:0.0366,use:'Alpha reasoning agent'},
+      {m:'Claude Sonnet 4.6',p:'Anthropic',req:'2.41M',tok:'560M',cost:12,avg:0.0050,use:'Beta document extraction'},
+      {m:'Claude Opus 4.5',p:'Anthropic',req:'0.14M',tok:'90M',cost:6,avg:0.0429,use:'Escalated support triage'},
+      {m:'GPT-5 mini',p:'Azure OpenAI',req:'0.13M',tok:'44M',cost:6,avg:0.0462,use:'Internal ops automation'},
+      {m:'Gemini 2.5 Pro',p:'Google',req:'0.31M',tok:'160M',cost:5,avg:0.0161,use:'Delta multimodal prototype'},
+      {m:'Claude Haiku 4.5',p:'Anthropic',req:'0.88M',tok:'130M',cost:3,avg:0.0034,use:'Log summarisation'}
+    ]
+  },
+
+  security:[{k:'Microsoft Sentinel',v:78},{k:'Defender / endpoint',v:41},{k:'Microsoft Purview',v:34},
+            {k:'Entra ID P2',v:26},{k:'DLP add-ons',v:18}],
+  secMeta:{ingestGB:1840, perGB:42.4, licUtil:88, ingestDelta:38},
+  obs:[{k:'Logs',v:44},{k:'Metrics',v:29},{k:'Traces',v:17},{k:'Retention & storage',v:9}],
+  obsMeta:{logGB:2410, metricSeries:'4.8M', traceSpans:'1.2B', perGB:18.3},
+  obsByProduct:[{k:'Product Alpha',v:26,share:26,traffic:38},{k:'Product Beta',v:24,share:24,traffic:29},
+                {k:'Product Gamma',v:31,share:31,traffic:12},{k:'Product Delta',v:8,share:8,traffic:6},
+                {k:'Shared platform',v:10,share:11,traffic:15}],
+  itsm:{total:57, tickets:3180, incidents:412, changes:286, perTicket:17.9, perIncident:64, perChange:41,
+        volume:[268,272,281,296,254,312,289,318,301,294,295],
+        byProduct:[{k:'Product Alpha',t:1104,inc:34,cost:8.4},{k:'Product Beta',t:892,inc:118,cost:6.9},
+                   {k:'Product Gamma',t:641,inc:96,cost:4.8},{k:'Product Delta',t:288,inc:41,cost:2.1},
+                   {k:'Internal IT',t:255,inc:123,cost:1.9}]},
+
+  products:[
+    {k:'Product Alpha',v:468,rev:3100,cloud:241,ai:61,saas:88,other:78,cust:74,budget:430},
+    {k:'Product Beta',v:351,rev:1850,cloud:186,ai:54,saas:61,other:50,cust:42,budget:344},
+    {k:'Product Gamma',v:289,rev:920,cloud:142,ai:38,saas:54,other:55,cust:24,budget:262},
+    {k:'Product Delta',v:176,rev:280,cloud:76,ai:19,saas:41,other:40,cust:8,budget:198},
+    {k:'Shared services',v:249,rev:0,cloud:0,ai:46,saas:47,other:156,cust:0,budget:266}
+  ],
+
+  depts:[{k:'Engineering',v:812,budget:760},{k:'Product',v:214,budget:205},{k:'Security / IT',v:248,budget:230},
+         {k:'Sales',v:96,budget:104},{k:'Operations',v:72,budget:70},{k:'Marketing',v:58,budget:62},
+         {k:'Finance',v:31,budget:34},{k:'HR',v:22,budget:24},{k:'Unallocated',v:67,budget:11}],
+
+  vendors:[
+    {k:'Microsoft',cat:'Cloud · Productivity · Security',v:575,contract:640,start:'01 Sep 2024',renew:'28 Sep 2026',util:84,owner:'R. Kadavan',risk:'Medium'},
+    {k:'Amazon Web Services',cat:'Cloud infrastructure',v:297,contract:340,start:'01 Apr 2025',renew:'31 Mar 2027',util:91,owner:'S. Menon',risk:'Low'},
+    {k:'Google Cloud',cat:'Cloud infrastructure',v:118,contract:130,start:'01 Jan 2026',renew:'31 Dec 2026',util:78,owner:'S. Menon',risk:'Low'},
+    {k:'Grafana Labs',cat:'Observability',v:99,contract:110,start:'25 Aug 2025',renew:'25 Aug 2026',util:72,owner:'N. Rao',risk:'High'},
+    {k:'OpenAI',cat:'AI / LLM',v:64,contract:72,start:'01 Feb 2026',renew:'31 Jan 2027',util:81,owner:'G. Prasad',risk:'Medium'},
+    {k:'Atlassian',cat:'ITSM · Collaboration',v:57,contract:64,start:'01 Nov 2025',renew:'31 Oct 2026',util:69,owner:'I. Sheikh',risk:'Medium'},
+    {k:'GitHub',cat:'Developer platform',v:47,contract:52,start:'01 Jun 2026',renew:'31 May 2027',util:76,owner:'S. Menon',risk:'Low'},
+    {k:'Anthropic',cat:'AI / LLM',v:43,contract:56,start:'15 Mar 2026',renew:'14 Mar 2027',util:54,owner:'G. Prasad',risk:'High'},
+    {k:'Figma',cat:'Design',v:14,contract:16,start:'01 Oct 2025',renew:'30 Sep 2026',util:88,owner:'L. Kumar',risk:'Low'},
+    {k:'Perplexity',cat:'AI / LLM',v:12,contract:12,start:'01 May 2026',renew:'30 Apr 2027',util:47,owner:'G. Prasad',risk:'Medium'}
+  ],
+
+  saas:[
+    {app:'Microsoft 365 E5',vendor:'Microsoft',cat:'Productivity',lic:52,active:40,cost:11.4,renew:'28 Sep 2026',owner:'R. Kadavan'},
+    {app:'GitHub Enterprise',vendor:'GitHub',cat:'Developer',lic:38,active:29,cost:3.9,renew:'31 May 2027',owner:'S. Menon'},
+    {app:'Jira + Confluence',vendor:'Atlassian',cat:'ITSM',lic:50,active:44,cost:3.4,renew:'31 Oct 2026',owner:'I. Sheikh'},
+    {app:'Grafana Cloud Pro',vendor:'Grafana Labs',cat:'Observability',lic:24,active:17,cost:8.3,renew:'25 Aug 2026',owner:'N. Rao'},
+    {app:'ChatGPT Business',vendor:'OpenAI',cat:'AI',lic:42,active:34,cost:3.2,renew:'31 Jan 2027',owner:'G. Prasad'},
+    {app:'Claude Enterprise',vendor:'Anthropic',cat:'AI',lic:35,active:19,cost:1.9,renew:'14 Mar 2027',owner:'G. Prasad'},
+    {app:'Microsoft 365 Copilot',vendor:'Microsoft',cat:'AI',lic:44,active:37,cost:3.3,renew:'28 Sep 2026',owner:'R. Kadavan'},
+    {app:'Gemini Advanced',vendor:'Google',cat:'AI',lic:26,active:12,cost:1.3,renew:'31 Dec 2026',owner:'G. Prasad'},
+    {app:'Perplexity Enterprise',vendor:'Perplexity',cat:'AI',lic:22,active:10,cost:1.0,renew:'30 Apr 2027',owner:'G. Prasad'},
+    {app:'Power BI Premium',vendor:'Microsoft',cat:'Analytics',lic:12,active:7,cost:2.8,renew:'28 Sep 2026',owner:'A. Iyer'},
+    {app:'Intune + Autopilot',vendor:'Microsoft',cat:'Device mgmt',lic:50,active:50,cost:1.8,renew:'28 Sep 2026',owner:'R. Kadavan'},
+    {app:'Figma Organisation',vendor:'Figma',cat:'Design',lic:14,active:12,cost:1.3,renew:'30 Sep 2026',owner:'L. Kumar'},
+    {app:'Miro Business',vendor:'Miro',cat:'Whiteboard',lic:30,active:11,cost:0.6,renew:'12 Nov 2026',owner:'L. Kumar'},
+    {app:'Lucidchart Team',vendor:'Lucid',cat:'Whiteboard',lic:18,active:6,cost:0.4,renew:'03 Feb 2027',owner:'I. Sheikh'},
+    {app:'1Password Business',vendor:'AgileBits',cat:'Security',lic:50,active:48,cost:0.4,renew:'19 Jan 2027',owner:'R. Kadavan'},
+    {app:'Zoom Business',vendor:'Zoom',cat:'Comms',lic:20,active:9,cost:0.5,renew:'07 Dec 2026',owner:'I. Sheikh'}
+  ],
+
+  opps:[
+    {o:'Terminate 3 idle EC2 instances — Alpha production',cat:'Cloud',s:34,eff:'Low',conf:'High',owner:'S. Menon',st:'Approved',due:'12 Aug 2026'},
+    {o:'Consolidate overlapping GenAI seats (18 employees on 3+ tools)',cat:'AI',s:28,eff:'Medium',conf:'High',owner:'G. Prasad',st:'Under review',due:'30 Aug 2026'},
+    {o:'Rightsize 11 oversized Azure VMs — Beta',cat:'Cloud',s:21,eff:'Medium',conf:'High',owner:'S. Menon',st:'In progress',due:'21 Aug 2026'},
+    {o:'Raise AWS Savings Plan coverage from 58% to 85%',cat:'Cloud',s:15,eff:'Low',conf:'High',owner:'A. Iyer',st:'Approved',due:'05 Aug 2026'},
+    {o:'Renegotiate Microsoft EA volume tier at renewal',cat:'Contract',s:15,eff:'High',conf:'Medium',owner:'R. Kadavan',st:'In progress',due:'28 Sep 2026'},
+    {o:'Reclaim 12 inactive Microsoft 365 E5 seats',cat:'SaaS',s:14,eff:'Low',conf:'High',owner:'R. Kadavan',st:'Identified',due:'15 Aug 2026'},
+    {o:'Reduce Claude Enterprise by 12 seats (54% utilised)',cat:'Licence',s:13,eff:'Low',conf:'Medium',owner:'G. Prasad',st:'Under review',due:'14 Sep 2026'},
+    {o:'Drop high-cardinality labels on Gamma metrics',cat:'Observability',s:12,eff:'Medium',conf:'High',owner:'N. Rao',st:'In progress',due:'18 Aug 2026'},
+    {o:'Retire duplicate diagramming tools (Miro + Lucidchart)',cat:'SaaS',s:11,eff:'Low',conf:'High',owner:'L. Kumar',st:'Identified',due:'12 Nov 2026'},
+    {o:'Downgrade Power BI Premium capacity',cat:'SaaS',s:9,eff:'Low',conf:'Medium',owner:'A. Iyer',st:'Identified',due:'01 Sep 2026'},
+    {o:'Move GitHub Enterprise to Team for 9 non-dev users',cat:'Licence',s:9,eff:'Low',conf:'High',owner:'S. Menon',st:'Approved',due:'26 Aug 2026'},
+    {o:'Route Gamma classification to a smaller model',cat:'AI',s:9,eff:'Medium',conf:'Medium',owner:'N. Rao',st:'Under review',due:'09 Sep 2026'},
+    {o:'Delete unattached disks and stale snapshots',cat:'Cloud',s:8,eff:'Low',conf:'High',owner:'S. Menon',st:'In progress',due:'04 Aug 2026'},
+    {o:'Move Atlassian to a two-year commitment',cat:'Contract',s:6,eff:'Medium',conf:'Medium',owner:'I. Sheikh',st:'Identified',due:'31 Oct 2026'},
+    {o:'Cut non-production log retention from 90 to 30 days',cat:'Observability',s:6,eff:'Low',conf:'High',owner:'N. Rao',st:'Approved',due:'11 Aug 2026'},
+    {o:'Enable prompt caching on the Beta extraction pipeline',cat:'AI',s:4,eff:'Medium',conf:'High',owner:'G. Prasad',st:'Implemented',due:'02 Jul 2026'}
+  ],
+
+  anomalies:[
+    {d:'24 Jun 2026',prov:'AWS',prod:'Product Alpha',svc:'EC2 — compute',exp:22.1,act:31.4,sev:'Critical',owner:'S. Menon',st:'Investigating',
+     why:'Alpha compute rose 42% after three additional production instances were deployed on 18 June. All three average below 12% CPU utilisation and none carry a product tag.'},
+    {d:'19 Jun 2026',prov:'Azure',prod:'Product Beta',svc:'Azure OpenAI',exp:4.2,act:6.1,sev:'High',owner:'G. Prasad',st:'Fix deployed',
+     why:'Token consumption rose 46%. A retry loop in the embedding job re-sent 214K requests without caching. Caching was enabled on 27 June.'},
+    {d:'16 Jun 2026',prov:'Microsoft',prod:'Product Beta',svc:'Sentinel ingestion',exp:6.4,act:8.8,sev:'High',owner:'R. Kadavan',st:'Investigating',
+     why:'Ingestion rose 38%, driven by verbose debug logging left on in Beta application containers after the 9 June release.'},
+    {d:'11 Jun 2026',prov:'Google Cloud',prod:'Product Gamma',svc:'Cloud NAT — egress',exp:1.1,act:2.4,sev:'High',owner:'N. Rao',st:'Root cause found',
+     why:'Cross-region egress doubled after the analytics service moved to us-central1 while its data store stayed in europe-west1.'},
+    {d:'05 Jun 2026',prov:'Atlassian',prod:'Shared services',svc:'Jira licences',exp:2.8,act:3.4,sev:'Medium',owner:'I. Sheikh',st:'Resolved',
+     why:'14 seats were auto-provisioned by the directory sync rule when contractors were added to the engineering group.'},
+    {d:'28 May 2026',prov:'AWS',prod:'Product Delta',svc:'S3 — storage',exp:0.9,act:1.6,sev:'Medium',owner:'S. Menon',st:'Resolved',
+     why:'Delta prototype buckets had no lifecycle policy; 14TB of intermediate build artefacts accumulated over four months.'}
+  ],
+
+  alerts:[
+    {sev:'Critical',t:'AWS spend exceeded monthly forecast by 17%',impact:4.6,save:34,prod:'Product Alpha',owner:'S. Menon',act:'Terminate 3 idle production instances'},
+    {sev:'High',t:'Azure OpenAI token consumption up 46%',impact:1.9,save:9,prod:'Product Beta',owner:'G. Prasad',act:'Confirm caching is live on the embedding job'},
+    {sev:'High',t:'Sentinel log ingestion up 38%',impact:2.4,save:4.8,prod:'Product Beta',owner:'R. Kadavan',act:'Turn off debug logging in Beta containers'},
+    {sev:'High',t:'Grafana Cloud renewal in 28 days at 72% utilisation',impact:0,save:12,prod:'Shared services',owner:'N. Rao',act:'Open renewal negotiation this week'},
+    {sev:'Medium',t:'12 Microsoft 365 E5 licences inactive for 45+ days',impact:1.0,save:14,prod:'Shared services',owner:'R. Kadavan',act:'Reclaim seats before the 28 Sep renewal'},
+    {sev:'Medium',t:'8 employees hold ChatGPT, Claude and Gemini seats',impact:0.7,save:28,prod:'Shared services',owner:'G. Prasad',act:'Assign one primary tool per role'},
+    {sev:'Low',t:'3 unattached cloud disks detected',impact:0.3,save:8,prod:'Product Gamma',owner:'S. Menon',act:'Delete after 7-day grace period'}
+  ],
+
+  variance:[
+    {k:'YTD budget',v:1500,type:'base'},{k:'Cloud growth',v:64,type:'up'},{k:'AI adoption',v:38,type:'up'},
+    {k:'Alpha launch',v:26,type:'up'},{k:'New SaaS',v:21,type:'up'},{k:'Security expansion',v:19,type:'up'},
+    {k:'Unplanned infra',v:14,type:'up'},{k:'SaaS optimisation',v:-34,type:'down'},
+    {k:'Reserved capacity',v:-28,type:'down'},{k:'YTD actual',v:1620,type:'total'}
+  ],
+
+  scenarios:[
+    {k:'Optimisation',v:1690,d:'Full optimisation backlog delivered by October'},
+    {k:'Baseline',v:1780,d:'Current run-rate, committed renewals only'},
+    {k:'Growth',v:1860,d:'Two new products enter production; headcount 58'},
+    {k:'Aggressive growth',v:1940,d:'Growth plan plus unconstrained AI experimentation'}
+  ],
+  drivers:[{k:'AI usage',v:22},{k:'Cloud workloads',v:14},{k:'Employee count',v:8},{k:'SaaS optimisation',v:-7},{k:'Reserved capacity',v:-11}],
+
+  tagging:[{k:'Product tag missing',res:62,v:41},{k:'Owner tag missing',res:38,v:22},
+           {k:'Cost centre missing',res:24,v:15},{k:'Environment tag missing',res:17,v:9}],
+
+  savingsByCat:[{k:'Cloud',v:78},{k:'AI',v:41},{k:'SaaS',v:34},{k:'Licence',v:22},{k:'Contract',v:21},{k:'Observability',v:18}],
+
+  sources:[['AWS Cost & Usage Report','Cloud'],['Azure Cost Management','Cloud'],['Google Cloud Billing','Cloud'],
+           ['Microsoft 365 admin','SaaS'],['Microsoft Purview','Security'],['Microsoft Sentinel','Security'],
+           ['AI provider APIs','AI'],['Jira','ITSM'],['Grafana Cloud','Observability'],
+           ['SaaS vendor portals','SaaS'],['HR directory','People'],['Finance / ERP','Finance']],
+
+  resource:{name:'alpha-prod-api-07',id:'i-0a94c3f2e81bd7c40',owner:'S. Menon',product:'Product Alpha',
+            env:'Production',cc:'ENG-1140',cur:1.3,prev:0.7,util:11,rec:'Terminate — replaced by autoscaling group on 18 Jun',save:0.94, groupSave:34}
+};
+
+/* ---- consistency guards: these must never drift ---- */
+const sum = a => a.reduce((x,y)=>x+y,0);
+const T = {
+  ytd: sum(D.trend.actual.filter(v=>v!==null)),
+  cats: sum(D.categories.map(c=>c.v)),
+  cloudProv: sum(D.cloud.providers.map(p=>p.v)),
+  cloudSvc: sum(D.cloud.services.map(s=>s.v)),
+  cloudEnv: sum(D.cloud.envs.map(e=>e.v)),
+  aiProv: sum(D.ai.providers.map(p=>p.v)),
+  prod: sum(D.products.map(p=>p.v)),
+  opps: sum(D.opps.map(o=>o.s)),
+  savCat: sum(D.savingsByCat.map(s=>s.v)),
+  tags: sum(D.tagging.map(t=>t.v))
+};
+console.log('reconciliation', T);
+
+/* ---------- formatting ---------- */
+const money = v => v==null?'—':(Math.abs(v)>=1000 ? '$'+(v/1000).toFixed(2)+'M' : '$'+Math.round(v)+'K');
+const moneyK = v => '$'+(Math.round(v*10)/10).toLocaleString('en-US')+'K';
+const dollars = v => '$'+v.toLocaleString('en-US');
+const pct = (v,dp=1) => (v>0?'':'')+v.toFixed(dp)+'%';
+const signed = v => (v>=0?'+':'−')+money(Math.abs(v));
+const share = (v,t) => (v/t*100).toFixed(1)+'%';
+/* ============================================================
+   Components — small functions that return HTML strings
+   ============================================================ */
+const el = (h) => h;
+const kpi = ({k,v,foot,delta,dir,hero}) => `
+  <div class="kpi ${hero?'hero':''}">
+    <span class="kpi-k">${k}</span>
+    <span class="kpi-v">${v}</span>
+    ${foot||delta?`<div class="kpi-f">${delta?`<span class="delta ${dir||'flat'}">${delta}</span>`:''}${foot?`<span>${foot}</span>`:''}</div>`:''}
+  </div>`;
+
+const card = ({title,hint,body,note,span=6,pad=true}) => `
+  <div class="card c${span}">
+    ${title?`<div class="card-h"><h3>${title}</h3>${hint?`<span class="hint">${hint}</span>`:''}</div>`:''}
+    ${pad?`<div class="card-b">${body}</div>`:body}
+    ${note?`<div class="card-note">${note}</div>`:''}
+  </div>`;
+
+const insight = ({q,text,tone='',span=12}) => `
+  <div class="c${span}"><div class="insight ${tone}">
+    <div class="q">${q}</div><p>${text}</p>
+  </div></div>`;
+
+const badge = (label,tone) => `<span class="badge ${tone}">${label}</span>`;
+const sevBadge = s => badge(s, s==='Critical'?'crit':s==='High'?'high':s==='Medium'?'med':'low');
+const stBadge = s => badge(s, s==='Implemented'?'ok':s==='In progress'?'med':s==='Approved'?'high':'n');
+const riskBadge = s => badge(s, s==='High'?'crit':s==='Medium'?'high':'ok');
+
+const meter = (p,tone='') => `<div class="meter ${tone}"><i style="width:${Math.min(100,p)}%"></i></div>`;
+const utilCell = p => `<div class="util">${meter(p, p<60?'bad':p<80?'warn':'good')}<span class="num">${p}%</span></div>`;
+
+const table = (cols, rows, totalRow) => `
+  <div class="tbl-scroll"><table>
+    <thead><tr>${cols.map(c=>`<th class="${c.r?'r':''}">${c.t}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${cols[i].r?'r':''} ${cols[i].mono?'mono':''}">${c}</td>`).join('')}</tr>`).join('')}
+    ${totalRow?`<tr class="total">${totalRow.map((c,i)=>`<td class="${cols[i].r?'r':''}">${c}</td>`).join('')}</tr>`:''}
+    </tbody></table></div>`;
+
+const legend = (items,total,rows=true) => `
+  <div class="legend ${rows?'rows':''}">${items.map(i=>`
+    <div><i style="background:var(${i.g||'--g3'})"></i>${i.k}<b>${moneyK(i.v)}</b>
+    <b style="color:var(--ink-3);min-width:46px">${share(i.v,total)}</b></div>`).join('')}</div>`;
+
+/* ============================================================
+   Charts — plain SVG, hairline grid, no gradients
+   ============================================================ */
+const RAMP = ['--g1','--g2','--g3','--g4','--g5','--g6','--g7','--g8'];
+
+function lineChart(series, labels, o={}){
+  const W=o.w||680, H=o.h||210, L=44, R=12, Tp=12, B=24;
+  const all = series.flatMap(s=>s.values).filter(v=>v!==null);
+  const max = o.max || Math.ceil(Math.max(...all)*1.12/10)*10, min=0;
+  const x = i => L + i*((W-L-R)/(labels.length-1));
+  const y = v => Tp + (H-Tp-B)*(1-(v-min)/(max-min));
+  const ticks=[0,.25,.5,.75,1].map(t=>min+(max-min)*t);
+  let g='';
+  ticks.forEach(t=>{g+=`<line class="gridline" x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}"/>
+    <text class="axis" x="${L-8}" y="${y(t)+3}" text-anchor="end">${o.fmt?o.fmt(t):'$'+Math.round(t)+'K'}</text>`});
+  labels.forEach((l,i)=>{g+=`<text class="axis" x="${x(i)}" y="${H-8}" text-anchor="middle">${l}</text>`});
+  series.forEach(s=>{
+    const pts = s.values.map((v,i)=>v===null?null:[x(i),y(v)]).filter(Boolean);
+    const d = pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+    if(s.area){
+      const first=s.values.findIndex(v=>v!==null);
+      g+=`<path d="${d} L${pts[pts.length-1][0]} ${y(0)} L${x(first)} ${y(0)} Z" fill="var(${s.color})" opacity=".05"/>`;
+    }
+    g+=`<path d="${d}" fill="none" stroke="var(${s.color})" stroke-width="${s.w||1.75}" ${s.dash?`stroke-dasharray="4 3"`:''} stroke-linejoin="round"/>`;
+    if(s.dots) pts.forEach(p=>g+=`<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="var(--surface)" stroke="var(${s.color})" stroke-width="1.5"/>`);
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">${g}</svg>
+  <div class="legend">${series.map(s=>`<div><i style="background:var(${s.color});${s.dash?'height:2px;border-radius:0':''}"></i>${s.name}</div>`).join('')}</div>`;
+}
+
+function stackedBars(labels, series, o={}){
+  const W=o.w||680,H=o.h||210,L=44,R=12,Tp=12,B=24;
+  const totals = labels.map((_,i)=>series.reduce((s,x)=>s+(x.values[i]||0),0));
+  const max = Math.ceil(Math.max(...totals)*1.12/10)*10;
+  const bw = (W-L-R)/labels.length*0.62;
+  const cx = i => L + (i+0.5)*((W-L-R)/labels.length);
+  const y = v => Tp+(H-Tp-B)*(1-v/max);
+  let g='';
+  [0,.25,.5,.75,1].forEach(t=>{const v=max*t;g+=`<line class="gridline" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/>
+    <text class="axis" x="${L-8}" y="${y(v)+3}" text-anchor="end">$${Math.round(v)}K</text>`});
+  labels.forEach((l,i)=>{
+    let acc=0;
+    series.forEach(s=>{
+      const v=s.values[i]||0; const h=(H-Tp-B)*v/max;
+      g+=`<rect x="${cx(i)-bw/2}" y="${y(acc+v)}" width="${bw}" height="${h}" fill="var(${s.color})"/>`;
+      acc+=v;
+    });
+    g+=`<text class="axis" x="${cx(i)}" y="${H-8}" text-anchor="middle">${l}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">${g}</svg>
+  <div class="legend">${series.map(s=>`<div><i style="background:var(${s.color})"></i>${s.name}</div>`).join('')}</div>`;
+}
+
+function donut(items,o={}){
+  const total = items.reduce((s,i)=>s+i.v,0);
+  const S=o.size||168, r=S/2-4, ir=o.ir||r*0.62, cx=S/2, cy=S/2;
+  let a=-Math.PI/2, g='';
+  items.forEach((it,idx)=>{
+    const sw = it.v/total*Math.PI*2, b=a+sw;
+    const p = (rad,ang)=>[cx+rad*Math.cos(ang), cy+rad*Math.sin(ang)];
+    const [x1,y1]=p(r,a),[x2,y2]=p(r,b),[x3,y3]=p(ir,b),[x4,y4]=p(ir,a);
+    g+=`<path d="M${x1} ${y1} A${r} ${r} 0 ${sw>Math.PI?1:0} 1 ${x2} ${y2} L${x3} ${y3} A${ir} ${ir} 0 ${sw>Math.PI?1:0} 0 ${x4} ${y4} Z"
+      fill="var(${it.g||RAMP[idx%8]})" stroke="var(--surface)" stroke-width="1.5"/>`;
+    a=b;
+  });
+  g+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" style="font-family:var(--mono);font-size:15px;font-weight:600;fill:var(--ink)">${money(total)}</text>
+      <text x="${cx}" y="${cy+12}" text-anchor="middle" class="axis" style="font-size:8.5px;letter-spacing:.1em">${o.label||'YTD'}</text>`;
+  return `<svg viewBox="0 0 ${S} ${S}" style="width:${S}px;margin:0 auto">${g}</svg>`;
+}
+
+function hbars(items,o={}){
+  const max = Math.max(...items.map(i=>i.v));
+  const total = items.reduce((s,i)=>s+i.v,0);
+  return `<div class="rows">${items.map((i,idx)=>`
+    <div class="row">
+      <div class="grow">
+        <div class="t">${i.k}</div>
+        <div style="margin-top:5px;height:6px;background:var(--surface-2);border-radius:2px">
+          <i style="display:block;height:100%;border-radius:2px;width:${i.v/max*100}%;background:var(${i.g||RAMP[idx%8]})"></i>
+        </div>
+      </div>
+      <div class="v">${moneyK(i.v)}<div class="d" style="font-weight:400">${share(i.v,total)}</div></div>
+    </div>`).join('')}</div>`;
+}
+
+function waterfall(steps,o={}){
+  const W=o.w||680,H=o.h||230,L=48,R=12,Tp=14,B=52;
+  let run=0; const pts=[];
+  steps.forEach(s=>{
+    if(s.type==='base'){pts.push({k:s.k,from:0,to:s.v,type:'base'});run=s.v;}
+    else if(s.type==='total'){pts.push({k:s.k,from:0,to:s.v,type:'total'});}
+    else {pts.push({k:s.k,from:run,to:run+s.v,type:s.type,delta:s.v});run+=s.v;}
+  });
+  const max = Math.ceil(Math.max(...pts.map(p=>Math.max(p.from,p.to)))*1.06/50)*50;
+  const bw=(W-L-R)/pts.length*0.6, cx=i=>L+(i+0.5)*((W-L-R)/pts.length);
+  const y=v=>Tp+(H-Tp-B)*(1-v/max);
+  let g='';
+  [0,.5,1].forEach(t=>{const v=max*t;g+=`<line class="gridline" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/>
+    <text class="axis" x="${L-8}" y="${y(v)+3}" text-anchor="end">$${Math.round(v)}K</text>`});
+  pts.forEach((p,i)=>{
+    const top=y(Math.max(p.from,p.to)), h=Math.max(2,Math.abs(y(p.to)-y(p.from)));
+    const fill = p.type==='base'||p.type==='total'?'var(--g2)':p.type==='up'?'var(--neg)':'var(--pos)';
+    g+=`<rect x="${cx(i)-bw/2}" y="${top}" width="${bw}" height="${h}" fill="${fill}" opacity="${p.type==='up'||p.type==='down'?.85:1}"/>`;
+    if(i<pts.length-1) g+=`<line x1="${cx(i)+bw/2}" x2="${cx(i+1)-bw/2}" y1="${y(p.to)}" y2="${y(p.to)}" stroke="var(--line-2)" stroke-dasharray="2 2"/>`;
+    const lab = p.type==='up'||p.type==='down'?(p.delta>0?'+':'−')+Math.abs(p.delta):Math.round(p.to);
+    g+=`<text class="axis" x="${cx(i)}" y="${top-5}" text-anchor="middle" style="fill:var(--ink);font-size:9.5px;font-weight:600">${lab}</text>`;
+    const words=p.k.split(' ');
+    g+=`<text class="axis" x="${cx(i)}" y="${H-B+16}" text-anchor="middle">${words[0]}</text>`;
+    if(words[1]) g+=`<text class="axis" x="${cx(i)}" y="${H-B+27}" text-anchor="middle">${words.slice(1).join(' ')}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+}
+
+function bandChart(o){
+  const W=o.w||680,H=o.h||230,L=48,R=14,Tp=14,B=24;
+  const labels=D.meta.months.concat(['Aug','Sep','Oct']);
+  const act=D.trend.actual.slice(0,11).concat([null,null,null,null]);
+  const base=[null,null,null,null,null,null,null,null,null,null,162,160,164,168,172];
+  const up  =[null,null,null,null,null,null,null,null,null,null,162,168,176,184,192];
+  const dn  =[null,null,null,null,null,null,null,null,null,null,162,152,150,148,146];
+  const max=220;
+  const x=i=>L+i*((W-L-R)/(labels.length-1)), y=v=>Tp+(H-Tp-B)*(1-v/max);
+  let g='';
+  [0,.25,.5,.75,1].forEach(t=>{const v=max*t;g+=`<line class="gridline" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/>
+    <text class="axis" x="${L-8}" y="${y(v)+3}" text-anchor="end">$${Math.round(v)}K</text>`});
+  labels.forEach((l,i)=>g+=`<text class="axis" x="${x(i)}" y="${H-8}" text-anchor="middle">${l}</text>`);
+  const seg=arr=>arr.map((v,i)=>v===null?null:[x(i),y(v)]).filter(Boolean);
+  const U=seg(up),Dn=seg(dn);
+  g+=`<path d="${U.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')} ${Dn.slice().reverse().map(p=>'L'+p[0]+' '+p[1]).join(' ')} Z" fill="var(--g5)" opacity=".13"/>`;
+  const line=(arr,col,dash)=>{const s=seg(arr);g+=`<path d="${s.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')}" fill="none" stroke="var(${col})" stroke-width="1.75" ${dash?'stroke-dasharray="4 3"':''}/>`};
+  line(base,'--g3',true); line(act,'--g1',false);
+  g+=`<line x1="${x(10)}" x2="${x(10)}" y1="${Tp}" y2="${H-B}" stroke="var(--line-2)"/>
+      <text class="axis" x="${x(10)+5}" y="${Tp+9}">forecast →</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}">${g}</svg>
+  <div class="legend"><div><i style="background:var(--g1)"></i>Actual</div>
+  <div><i style="background:var(--g3);height:2px;border-radius:0"></i>Baseline forecast</div>
+  <div><i style="background:var(--g5);opacity:.4"></i>Upper / lower range</div></div>`;
+}
+
+function flowDiagram(){
+  const stages=[['Technology data sources','12 systems'],['FinOps data platform','Normalise & ingest'],
+                ['Allocation & enrichment','Tags, owners, rates'],['Analytics','Trend, unit cost, variance'],
+                ['Optimisation','Backlog & savings'],['Persona dashboards','4 audiences']];
+  const W=980,H=132,bw=140,gap=(W-stages.length*bw)/(stages.length-1);
+  let g='';
+  stages.forEach((s,i)=>{
+    const x=i*(bw+gap);
+    g+=`<rect x="${x}" y="34" width="${bw}" height="60" rx="5" fill="var(--surface)" stroke="var(--line-2)"/>
+        <text x="${x+bw/2}" y="52" text-anchor="middle" style="font-size:9px;font-family:var(--mono);letter-spacing:.08em;fill:var(--ink-3)">0${i+1}</text>`;
+    const words=s[0].split(' '); const l1=words.slice(0,2).join(' '), l2=words.slice(2).join(' ');
+    g+=`<text x="${x+bw/2}" y="70" text-anchor="middle" style="font-size:11px;font-weight:600;fill:var(--ink)">${l1}</text>
+        <text x="${x+bw/2}" y="83" text-anchor="middle" style="font-size:10px;fill:var(--ink-2)">${l2||s[1]}</text>`;
+    if(i<stages.length-1) g+=`<path d="M${x+bw+4} 64 L${x+bw+gap-6} 64" stroke="var(--line-2)" stroke-width="1"/>
+        <path d="M${x+bw+gap-10} 60.5 L${x+bw+gap-5} 64 L${x+bw+gap-10} 67.5" fill="var(--ink-4)"/>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+}
+/* ============================================================
+   Screens
+   ============================================================ */
+const head = (h1,p,tag) => `<div class="pagehead"><div><h1>${h1}</h1><p>${p}</p></div>${tag?`<div class="persona-tag">${tag}</div>`:''}</div>`;
+const S = {};
+
+/* ---------- 1. Executive overview ---------- */
+S.overview = () => {
+  const varAmt = D.ytdActual - D.ytdBudget;
+  const prods = D.products.map((p,i)=>({k:p.k,v:p.v,g:RAMP[i]}));
+  const provs = [
+    {k:'Microsoft',v:575},{k:'Amazon Web Services',v:297},{k:'Google Cloud',v:118},{k:'Grafana Labs',v:99},
+    {k:'OpenAI',v:64},{k:'Atlassian',v:57},{k:'GitHub',v:47},{k:'Anthropic',v:43},{k:'All other vendors (24)',v:320}
+  ];
+  return head('Executive overview','Where technology money went this fiscal year, why it moved, and the three decisions waiting on you.','Fiscal year Aug 2025 – Jul 2026')
+  + `<div class="grid">
+  ${kpi({k:'Total technology spend · YTD',v:money(D.ytdActual),delta:signed(varAmt)+' vs budget',dir:'up',foot:'11 months closed',hero:true})}
+  ${kpi({k:'YTD budget',v:money(D.ytdBudget),foot:'Phased plan, 11 months'})}
+  ${kpi({k:'Budget variance',v:'+8.0%',delta:signed(varAmt),dir:'up',foot:'Over plan'})}
+  ${kpi({k:'Forecast year-end',v:money(D.fyForecast),delta:signed(D.fyForecast-D.fyBudget),dir:'up',foot:'vs '+money(D.fyBudget)+' full-year budget'})}
+  ${kpi({k:'Identified savings',v:money(D.identified),foot:'16 opportunities in backlog'})}
+  ${kpi({k:'Realised savings',v:money(D.realized),delta:'45% of identified',dir:'gup',foot:'Banked so far this year'})}
+  ${kpi({k:'Cost per employee',v:'$32.4K',delta:'+6.1% YoY',dir:'up',foot:'50 employees'})}
+  ${kpi({k:'Unallocated spend',v:money(D.unallocated),delta:'5.4% of total',dir:'up',foot:'141 untagged resources'})}
+
+  ${card({span:8,title:'Technology spend trend',hint:'Actual · budget · forecast',body:lineChart([
+    {name:'Actual',values:D.trend.actual,color:'--g1',dots:true,area:true},
+    {name:'Budget',values:D.trend.budget,color:'--g5'},
+    {name:'Forecast',values:D.trend.forecast,color:'--g3',dash:true}
+  ],D.meta.months),note:'Actual has run above plan every month since <b>January</b>. The May–June step change is AI adoption, not cloud.'})}
+
+  ${card({span:4,title:'Spend by category',body:donut(D.categories,{label:'YTD total'})+legend(D.categories,D.ytdActual)})}
+
+  ${card({span:4,title:'Spend by vendor',hint:'Top 8 = 80%',body:hbars(provs.slice(0,8)),pad:false})}
+  ${card({span:4,title:'Spend by product',hint:'incl. shared',body:hbars(prods),pad:false})}
+  ${card({span:4,title:'Savings by source',hint:money(D.identified)+' identified',body:hbars(D.savingsByCat),pad:false})}
+
+  ${card({span:12,title:'Savings opportunities',hint:'Ranked by value',pad:false,body:table(
+    [{t:'Opportunity'},{t:'Category'},{t:'Owner'},{t:'Effort'},{t:'Confidence'},{t:'Status'},{t:'Annual saving',r:true}],
+    D.opps.slice(0,7).map(o=>[`<b>${o.o}</b>`,o.cat,o.owner,o.eff,o.conf,stBadge(o.st),moneyK(o.s)]),
+    ['Full backlog · 16 opportunities','','','','','',money(D.identified)]),
+    note:'Nine of sixteen are low-effort. Clearing just those returns <b>$119K</b> without an engineering sprint.'})}
+
+  ${insight({q:'What',text:'Technology spend is <b>$1.62M</b> year to date against a <b>$1.50M</b> phased budget — <b>8% over</b>. Cloud is 40% of the bill; AI is the fastest-growing line at 74% growth since January.',span:4})}
+  ${insight({q:'Why',tone:'warn',text:'Six drivers add <b>$182K</b> of upward pressure — cloud growth, AI adoption and Alpha\'s launch are <b>$128K</b> of it. Two optimisation programmes returned <b>$62K</b>. Net <b>+$120K</b>.',span:4})}
+  ${insight({q:'Do',tone:'act',text:'Approve the four <b>Approved</b> backlog items (<b>$64K</b>), reclaim 12 idle Microsoft E5 seats before the 28 September renewal, and set one primary AI tool per role.',span:4})}
+  </div>`;
+};
+
+/* ---------- 2. ITFM ---------- */
+S.itfm = () => {
+  const drill = ['Total technology','Cloud','AWS','Product Alpha','Production','Compute','EC2'];
+  const chargeback = [
+    ['Engineering','Product Alpha',241,88,61,42,36,468],
+    ['Engineering','Product Beta',186,61,54,31,19,351],
+    ['Product','Product Gamma',142,54,38,33,22,289],
+    ['Product','Product Delta',76,41,19,26,14,176],
+    ['Security / IT','Shared services',0,47,46,65,91,249]
+  ];
+  const cbTotals = [1,2,3,4,5,6,7].map(i=>chargeback.reduce((s,r)=>s+(typeof r[i]==='number'?r[i]:0),0));
+  return head('IT financial management','Cost transparency, allocation and unit economics for the whole technology estate.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Total IT spend',v:money(D.ytdActual),delta:'+8.0% vs budget',dir:'up',hero:true,foot:'YTD, 11 months'})}
+  ${kpi({k:'Forecast accuracy',v:'94.2%',delta:'+2.1 pts',dir:'gup',foot:'Rolling 3-month'})}
+  ${kpi({k:'Allocated spend',v:'94.6%',delta:'target 98%',dir:'flat',foot:money(1533)+' allocated'})}
+  ${kpi({k:'Unallocated spend',v:money(87),delta:'141 resources',dir:'up',foot:'Missing product or owner tag'})}
+  ${kpi({k:'Cost per employee',v:'$32.4K'})}
+  ${kpi({k:'Cost per product',v:'$321K',foot:'Average of 4 products'})}
+  ${kpi({k:'Optimisation potential',v:money(214),delta:'13.2% of spend',dir:'gup'})}
+  ${kpi({k:'Realised savings',v:money(96),delta:'45% conversion',dir:'gup'})}
+
+  ${card({span:12,title:'Cost breakdown',hint:'Click a level to drill',body:`
+    <div class="path">${drill.map((d,i)=>`${i?'<span class="sep">/</span>':''}<button class="${i===drill.length-1?'on':''}">${d}</button>`).join('')}</div>
+    <div style="margin-top:12px">${table(
+      [{t:'EC2 instance family'},{t:'Instances',r:true},{t:'Avg CPU',r:true},{t:'Previous month',r:true},{t:'Current month',r:true},{t:'Change',r:true},{t:'Recommendation'}],
+      [['m6i.2xlarge','8','41%','$9.1K','$9.6K','<span class="delta up">+5.5%</span>','Healthy'],
+       ['r6i.4xlarge','3','11%','$2.1K','$3.9K','<span class="delta up">+85.7%</span>','<b>Terminate — idle since 18 Jun</b>'],
+       ['c6i.xlarge','11','58%','$4.4K','$4.6K','<span class="delta up">+4.5%</span>','Healthy'],
+       ['t3.large','14','9%','$1.8K','$1.9K','<span class="delta up">+5.6%</span>','Rightsize to t3.medium — under review'],
+       ['g5.xlarge','2','63%','$3.2K','$3.4K','<span class="delta up">+6.3%</span>','Move to 1-year commitment']],
+      ['Total · 38 instances','38','—','$20.6K','$23.4K','<span class="delta up">+13.6%</span>',''])}</div>`,
+    note:'One row carries the story: <b>r6i.4xlarge</b> — three instances averaging 11% CPU at <b>$3.9K a month</b>. Terminating them returns <b>$34K a year</b> once the remaining reserved term is netted off.'})}
+
+  ${card({span:12,title:'Showback and chargeback',hint:'Shared cost allocated by headcount',pad:false,body:table(
+    [{t:'Business unit'},{t:'Product'},{t:'Cloud',r:true},{t:'SaaS',r:true},{t:'AI',r:true},{t:'Security',r:true},{t:'Shared',r:true},{t:'Chargeback total',r:true}],
+    chargeback.map(r=>[r[0],`<b>${r[1]}</b>`,...r.slice(2,7).map(v=>v?moneyK(v):'—'),`<b>${moneyK(r[7])}</b>`]),
+    ['Allocated','5 cost objects',...cbTotals.slice(1,6).map(v=>moneyK(v)),moneyK(cbTotals[6])]),
+    note:'Allocated <b>$1,533K</b> of <b>$1,620K</b>. The remaining <b>$87K</b> cannot be charged back until tagging is fixed.'})}
+
+  ${card({span:6,title:'Unit economics',hint:'YTD',pad:false,body:table(
+    [{t:'Metric'},{t:'Basis'},{t:'Value',r:true},{t:'vs last quarter',r:true}],
+    [['Cost per employee','50 employees','$32.4K','<span class="delta up">+6.1%</span>'],
+     ['Cost per customer','148 customers','$10.9K','<span class="delta down">−3.2%</span>'],
+     ['Cost per transaction','42.6M transactions','$0.038','<span class="delta down">−8.1%</span>'],
+     ['Cost per API request','214M requests','$0.0076','<span class="delta down">−11.4%</span>'],
+     ['Cost per AI request','6.2M requests','$0.0135','<span class="delta up">+18.9%</span>'],
+     ['Cost per support ticket','3,180 tickets','$17.90','<span class="delta up">+4.2%</span>'],
+     ['Infra cost per product','4 products','$161K','<span class="delta up">+7.7%</span>']],
+    null),
+    note:'Per-transaction cost is falling while total spend rises — the platform is getting <b>more efficient per unit</b>, just used far more.'})}
+
+  ${card({span:6,title:'Spend by department',hint:'Actual vs budget',pad:false,body:table(
+    [{t:'Department'},{t:'Budget',r:true},{t:'Actual',r:true},{t:'Variance',r:true},{t:'Utilisation',r:true}],
+    D.depts.map(d=>[d.k,moneyK(d.budget),moneyK(d.v),
+      `<span class="delta ${d.v>d.budget?'up':'down'}">${d.v>=d.budget?'+':'−'}${moneyK(Math.abs(d.v-d.budget))}</span>`,
+      utilCell(Math.round(d.v/d.budget*100))]),
+    ['Total',moneyK(1500),moneyK(1620),'<span class="delta up">+$120K</span>',''])})}
+
+  ${insight({q:'Do',tone:'act',span:12,text:'Two moves close most of the gap: fix tagging on <b>141 resources</b> so <b>$87K</b> becomes chargeable, and terminate the five idle instance groups above for <b>$42K</b> a year.'})}
+  </div>`;
+};
+
+/* ---------- 3. Multi-cloud ---------- */
+S.cloud = () => {
+  const p = D.cloud.providers;
+  const mo = D.meta.months.slice(0,11);
+  const optRows = [
+    ['alpha-prod-api-0{5,6,7} · r6i.4xlarge','AWS','Idle instances',3.9,2.8,'High','S. Menon','Approved'],
+    ['beta-app-vmss (11 nodes)','Azure','Rightsize',9.4,1.7,'High','S. Menon','In progress'],
+    ['aws-savings-plan-coverage','AWS','Commitment 58% → 85%',24.8,1.3,'High','A. Iyer','Approved'],
+    ['ebs-unattached (7 volumes)','AWS','Orphaned storage',0.8,0.4,'High','S. Menon','In progress'],
+    ['snapshots-older-than-180d','AWS','Lifecycle policy',0.6,0.3,'High','S. Menon','In progress']
+  ];
+  return head('Multi-cloud cost management','AWS, Azure and Google Cloud on one ledger — by service, environment and product.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Total cloud spend',v:money(D.cloud.total),delta:'39.8% of technology spend',dir:'flat',hero:true,foot:'YTD'})}
+  ${kpi({k:'AWS',v:moneyK(297),delta:'+3.4% MoM',dir:'up',foot:'46% of cloud'})}
+  ${kpi({k:'Microsoft Azure',v:moneyK(230),delta:'+2.1% MoM',dir:'up',foot:'36% of cloud'})}
+  ${kpi({k:'Google Cloud',v:moneyK(118),delta:'+8.3% MoM',dir:'up',foot:'18% of cloud'})}
+  ${kpi({k:'Month-over-month',v:'+1.5%',delta:'$66K → $67K',dir:'up',foot:'June vs May'})}
+  ${kpi({k:'Forecast year-end',v:moneyK(702),delta:'+8.8% vs YTD run-rate',dir:'up'})}
+  ${kpi({k:'Savings potential',v:moneyK(78),delta:'12.1% of cloud',dir:'gup'})}
+  ${kpi({k:'Commitment coverage',v:'58%',delta:'target 85%',dir:'gdown',foot:'On-demand exposure $141K'})}
+
+  ${card({span:8,title:'Cloud spend by provider',hint:'Monthly, stacked',body:stackedBars(mo,[
+    {name:'AWS',values:p[0].m,color:'--g1'},{name:'Azure',values:p[1].m,color:'--g4'},{name:'Google Cloud',values:p[2].m,color:'--g6'}
+  ]),note:'Google Cloud is the fastest-rising provider in percentage terms — Gamma\'s cross-region egress is most of it.'})}
+  ${card({span:4,title:'By environment',body:donut(D.cloud.envs,{label:'Cloud YTD'})+legend(D.cloud.envs,D.cloud.total)})}
+
+  ${card({span:6,title:'By service',pad:false,body:hbars(D.cloud.services)})}
+  ${card({span:6,title:'By product',pad:false,body:hbars([
+    {k:'Product Alpha',v:241},{k:'Product Beta',v:186},{k:'Product Gamma',v:142},{k:'Product Delta',v:76}
+  ]),note:'Cloud by product sums to <b>$645K</b> — every dollar traced to a product after allocation.'})}
+
+  ${card({span:12,title:'Optimisation opportunities',hint:'Prioritised',pad:false,body:table(
+    [{t:'Resource'},{t:'Provider'},{t:'Type'},{t:'Current monthly',r:true},{t:'Monthly saving',r:true},{t:'Confidence'},{t:'Owner'},{t:'Status'}],
+    optRows.map(r=>[`<span class="mono">${r[0]}</span>`,r[1],r[2],moneyK(r[3]),`<b>${moneyK(r[4])}</b>`,r[5],r[6],stBadge(r[7])]),
+    ['5 opportunities','','',moneyK(39.5),`<b>${moneyK(6.5)}</b>`,'','','']),
+    note:'<b>$6.5K a month</b> — <b>$78K annualised</b>, which is the entire cloud line of the savings backlog.'})}
+
+  ${insight({q:'Why',tone:'warn',span:6,text:'Production is <b>62%</b> of cloud spend but non-production is growing faster. Dev, test and staging together now cost <b>$221K</b> — more than Google Cloud in total.'})}
+  ${insight({q:'Do',tone:'act',span:6,text:'Lift Savings Plan coverage from <b>58% to 85%</b> for <b>$15K</b> a year at low effort, then schedule non-production shutdown outside working hours.'})}
+  </div>`;
+};
+
+/* ---------- 4. AI FinOps ---------- */
+S.ai = () => {
+  const a=D.ai, mo=D.meta.months.slice(0,11);
+  return head('AI cost management','Seats and tokens in one view — who is paying for which model, and what it returns.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Total AI spend',v:money(a.total),delta:'13.5% of technology spend',dir:'flat',hero:true,foot:'YTD'})}
+  ${kpi({k:'This month',v:moneyK(33),delta:'+3.1% MoM',dir:'up',foot:'June'})}
+  ${kpi({k:'Subscriptions',v:moneyK(a.sub),delta:'61% of AI spend',dir:'flat',foot:'169 assistant seats, 5 tools'})}
+  ${kpi({k:'API and tokens',v:moneyK(a.api),delta:'39% of AI spend',dir:'flat',foot:'6.2M requests'})}
+  ${kpi({k:'AI spend per employee',v:'$4.36K',delta:'+41% YoY',dir:'up'})}
+  ${kpi({k:'Growth since January',v:'+73.7%',delta:'$19K → $33K',dir:'up',foot:'Fastest-growing category'})}
+  ${kpi({k:'Potential AI savings',v:moneyK(41),delta:'18.8% of AI spend',dir:'gup'})}
+  ${kpi({k:'Unused AI licences',v:'57 seats',delta:'$39K annual exposure',dir:'up',foot:'of 169 purchased'})}
+
+  ${card({span:8,title:'AI spend trend',hint:'Subscription vs consumption',body:stackedBars(mo,[
+    {name:'Subscriptions (seats)',values:[9,9,10,11,11,12,12,13,13,17,17],color:'--g4'},
+    {name:'API / tokens',values:[4,5,5,6,5,7,6,8,7,15,16],color:'--g1'}
+  ]),note:'Seat cost grows in steps as licences are bought. Token cost grows continuously — and doubled in May when Gamma\'s pipeline went live.'})}
+  ${card({span:4,title:'Spend by provider',body:donut(a.providers,{label:'AI YTD'})+legend(a.providers,a.total)})}
+
+  ${card({span:5,title:'Token economics',pad:false,body:table(
+    [{t:'Measure'},{t:'Value',r:true}],
+    [['Input tokens','1.42B'],['Output tokens','214M'],['Cached tokens','486M'],['Requests','6.2M'],
+     ['Average tokens per request','264'],['Blended cost per 1M tokens','$51.40'],['Cost per request','$0.0135'],
+     ['Cached share of input','34.2%'],['Requests returning no usable output','214K · 3.5%']],null),
+    note:'Caching already absorbs a third of input tokens. Every extra point of cache hit rate is roughly <b>$0.6K</b> a month.'})}
+  ${card({span:7,title:'Model comparison',pad:false,body:table(
+    [{t:'Model'},{t:'Provider'},{t:'Requests YTD',r:true},{t:'Tokens YTD',r:true},{t:'Cost YTD',r:true},{t:'Cost / request',r:true},{t:'Primary use'}],
+    a.models.map(m=>[`<b>${m.m}</b>`,m.p,m.req,m.tok,moneyK(m.cost),'$'+m.avg.toFixed(4),`<span class="sub">${m.use}</span>`]),
+    ['7 models in production','','6.20M','1.63B',moneyK(84),'$0.0135',''])})}
+
+  ${card({span:4,title:'AI cost by product',pad:false,body:hbars(a.byProduct)})}
+  ${card({span:8,title:'Optimisation',pad:false,body:`<div class="rows">
+    ${[['AI tool consolidation','18 employees hold seats on three or more GenAI tools',28,'Assign one primary tool per role'],
+       ['Model routing','1.62M Gamma classification calls run on a frontier model',9,'Route to a small model; keep escalation path'],
+       ['Prompt caching','Beta extraction pipeline re-sends the same 8K-token context',4,'Enable caching on the system prompt'],
+       ['Unused subscriptions','Claude Enterprise 54% utilised, Gemini 46%, Perplexity 45%',13,'True down at renewal'],
+       ['Low-value requests','214K retry-loop calls in June returned no output',2,'Add retry ceiling and dead-letter queue']]
+      .map(r=>`<div class="row"><div class="grow"><div class="t">${r[0]}</div><div class="d">${r[1]} — ${r[3]}</div></div>
+      <div class="v">${moneyK(r[2])}<div class="d" style="font-weight:400">annual</div></div></div>`).join('')}</div>`,
+    note:'Consolidation alone is <b>$28,400</b> a year and needs no engineering work — only a licence policy.'})}
+
+  ${insight({q:'What',span:4,text:'AI is <b>$218K</b> YTD and the only category growing faster than 50% — <b>$134K</b> in seats, <b>$84K</b> in tokens.'})}
+  ${insight({q:'Why',tone:'warn',span:4,text:'Seats were bought per team, not per role, so <b>79 of 241</b> sit idle. Token growth is real product usage in Gamma and Beta.'})}
+  ${insight({q:'Do',tone:'act',span:4,text:'Consolidate seats (<b>$28K</b>), true down three enterprise plans at renewal (<b>$13K</b>), reroute classification traffic (<b>$9K</b>).'})}
+  </div>`;
+};
+
+/* ---------- 5. SaaS & licences ---------- */
+S.saas = () => {
+  const rows = D.saas.map(s=>{
+    const u=Math.round(s.active/s.lic*100);
+    return [`<div class="namecell"><b>${s.app}</b><span class="sub">${s.vendor} · ${s.cat}</span></div>`,
+      s.lic, s.active, utilCell(u), moneyK(s.cost), moneyK(s.cost*12), `<span class="mono">${s.renew}</span>`, s.owner];
+  });
+  const totLic=D.saas.reduce((a,s)=>a+s.lic,0), totAct=D.saas.reduce((a,s)=>a+s.active,0),
+        totCost=D.saas.reduce((a,s)=>a+s.cost,0);
+  return head('SaaS and licence management','Every subscription, who actually uses it, and what renews next.','Persona · Procurement + ITFM')
+  + `<div class="grid">
+  ${kpi({k:'SaaS and licence spend',v:money(291),delta:'18.0% of technology spend',dir:'flat',hero:true,foot:'YTD, excludes cloud'})}
+  ${kpi({k:'Applications',v:'16 tracked',foot:'34 vendors in total'})}
+  ${kpi({k:'Licences purchased',v:String(totLic)})}
+  ${kpi({k:'Active licences',v:String(totAct),delta:Math.round(totAct/totLic*100)+'% utilised',dir:'gdown'})}
+  ${kpi({k:'Unused licences',v:String(totLic-totAct),delta:moneyK(34)+' annual exposure',dir:'up'})}
+  ${kpi({k:'Overlapping applications',v:'2 overlaps',foot:'Whiteboard tools · AI assistants'})}
+  ${kpi({k:'Renewals in 90 days',v:'3 contracts',delta:moneyK(766)+' contract value',dir:'up'})}
+  ${kpi({k:'Potential savings',v:moneyK(56),delta:'SaaS + licence lines',dir:'gup'})}
+
+  ${card({span:12,title:'Application inventory',hint:'Sorted by monthly cost',pad:false,body:table(
+    [{t:'Application'},{t:'Purchased',r:true},{t:'Active',r:true},{t:'Utilisation',r:true},{t:'Monthly',r:true},{t:'Annualised',r:true},{t:'Renews'},{t:'Owner'}],
+    rows, ['16 applications',String(totLic),String(totAct),Math.round(totAct/totLic*100)+'%',moneyK(totCost),moneyK(totCost*12),'',''] ),
+    note:'Five applications sit below 50% utilisation: <b>Lucidchart, Miro, Perplexity, Zoom and Gemini Advanced</b> — 116 seats bought, 48 in use. Two of them do the same job.'})}
+
+  ${card({span:6,title:'Licence optimisation',pad:false,body:`<div class="rows">
+    ${[['12 inactive Microsoft 365 E5 seats','No sign-in for 45+ days',14],
+       ['Miro and Lucidchart overlap','48 seats, 17 active, same job',11],
+       ['Claude Enterprise at 54%','35 seats purchased, 19 active',13],
+       ['GitHub Enterprise for 9 non-developers','Team plan covers their usage',9],
+       ['Power BI Premium capacity','7 of 12 seats used, P1 over-provisioned',9],
+       ['Zoom Business at 45%','Teams is the standard for internal calls',5]]
+      .map(r=>`<div class="row"><div class="grow"><div class="t">${r[0]}</div><div class="d">${r[1]}</div></div>
+      <div class="v">${moneyK(r[2])}</div></div>`).join('')}</div>`})}
+  ${card({span:6,title:'Utilisation distribution',hint:'Seats by band',body:`
+    <div class="rows" style="margin:-12px -14px -14px">
+    ${[['90–100% utilised','2 applications',100,98,'good'],['70–89%','7 applications',264,213,'good'],
+       ['50–69%','2 applications',47,26,'warn'],['Below 50%','5 applications',116,48,'bad']]
+      .map(r=>`<div class="row"><div class="grow"><div class="t">${r[0]}</div>
+      <div class="d">${r[1]} · ${r[2]} purchased · ${r[3]} active · <b style="color:var(--ink-2)">${r[2]-r[3]} idle</b></div>
+      <div style="margin-top:6px">${meter(r[3]/r[2]*100,r[4])}</div></div>
+      <div class="v">${r[2]}<div class="d" style="font-weight:400">seats</div></div></div>`).join('')}</div>`,
+    note:'The bottom band is <b>116 seats purchased, 68 idle</b> — almost all of it AI tooling bought in the January–March rush.'})}
+
+  ${insight({q:'Do',tone:'act',span:12,text:'Reclaim before renewal, not after. <b>Microsoft renews 28 September</b> and <b>Grafana in 28 days</b> — every seat still attached on those dates is bought for another year.'})}
+  </div>`;
+};
+/* ---------- 6. Finance ---------- */
+S.finance = () => head('Finance','Budget, actuals, forecast and the story behind the variance.','Persona · Finance')
+  + `<div class="grid">
+  ${kpi({k:'Technology budget · full year',v:money(D.fyBudget),hero:true,foot:'Approved plan, Aug 2025 – Jul 2026'})}
+  ${kpi({k:'Actual · YTD',v:money(D.ytdActual),delta:'+8.0% vs phased plan',dir:'up'})}
+  ${kpi({k:'Forecast · year-end',v:money(D.fyForecast),delta:signed(D.fyForecast-D.fyBudget),dir:'up'})}
+  ${kpi({k:'Variance · YTD',v:'+'+money(120),delta:'+8.0%',dir:'up',foot:'Unfavourable'})}
+  ${kpi({k:'Committed spend',v:money(1124),delta:'69% of total',dir:'flat',foot:'Contracts and commitments'})}
+  ${kpi({k:'Uncommitted spend',v:money(496),delta:'31% of total',dir:'flat',foot:'On-demand and consumption'})}
+  ${kpi({k:'Savings realised',v:money(96),delta:'booked to date',dir:'gup'})}
+  ${kpi({k:'Savings pipeline',v:money(210),delta:'identified, not yet booked',dir:'flat',foot:'Excludes $4K already implemented'})}
+
+  ${card({span:12,title:'Budget versus actual and forecast',hint:'Monthly, $K',body:lineChart([
+    {name:'Budget',values:D.trend.budget,color:'--g5'},
+    {name:'Actual',values:D.trend.actual,color:'--g1',dots:true,area:true},
+    {name:'Forecast',values:D.trend.forecast,color:'--g3',dash:true}
+  ],D.meta.months,{h:230}),
+    note:'The plan was flat at roughly <b>$137K</b> a month. Actual has been above it in eight of eleven months and the gap widens after January.'})}
+
+  ${card({span:7,title:'Variance analysis',hint:'YTD budget to actual',body:waterfall(D.variance),
+    note:'Six drivers add <b>$182K</b>; two optimisation programmes return <b>$62K</b>. Net <b>+$120K</b>.'})}
+  ${card({span:5,title:'Variance by cost centre',pad:false,body:table(
+    [{t:'Cost centre'},{t:'Owner'},{t:'Budget',r:true},{t:'Actual',r:true},{t:'Variance',r:true}],
+    [['ENG-1140 · Platform','S. Menon',462,514,52],['ENG-1180 · Product eng','N. Rao',298,298,0],
+     ['SEC-2010 · Security & IT','R. Kadavan',230,248,18],['PRD-3050 · Product','G. Prasad',205,214,9],
+     ['GTM-4020 · Sales & marketing','I. Sheikh',166,154,-12],['CORP-5000 · Corporate','A. Iyer',128,125,-3],
+     ['— · Unallocated','Unassigned',11,67,56]].map(r=>[
+      `<span class="mono">${r[0]}</span>`,r[1],moneyK(r[2]),moneyK(r[3]),
+      `<span class="delta ${r[4]>0?'up':r[4]<0?'down':'flat'}">${r[4]===0?'—':(r[4]>0?'+':'−')+moneyK(Math.abs(r[4]))}</span>`]),
+    ['Total','',moneyK(1500),moneyK(1620),'<span class="delta up">+$120K</span>']),
+    note:'The second-largest variance has no owner. <b>Unallocated</b> is a finance problem before it is an engineering one.'})}
+
+  ${card({span:12,title:'Accounting view',hint:'For journal entry',pad:false,body:table(
+    [{t:'Category'},{t:'GL account'},{t:'Treatment'},{t:'YTD actual',r:true},{t:'YTD budget',r:true},{t:'Variance',r:true},{t:'Accrual required',r:true}],
+    [['Cloud infrastructure','6410 · Hosting','Opex, consumption',645,590,55,'$41K'],
+     ['SaaS and licences','6420 · Software','Opex, prepaid amortised',291,304,-13,'—'],
+     ['AI and LLM','6425 · AI services','Opex, mixed',218,168,50,'$18K'],
+     ['Security','6430 · Security tooling','Opex, consumption',197,182,15,'$9K'],
+     ['Observability','6435 · Monitoring','Opex, consumption',99,92,7,'$6K'],
+     ['ITSM','6440 · Service mgmt','Opex, prepaid amortised',57,60,-3,'—'],
+     ['Device management','6450 · Endpoint','Opex + amortised hardware',47,50,-3,'—'],
+     ['Other technology','6490 · Other IT','Opex',66,54,12,'$4K']].map(r=>[
+      r[0],`<span class="mono">${r[1]}</span>`,`<span class="sub">${r[2]}</span>`,moneyK(r[3]),moneyK(r[4]),
+      `<span class="delta ${r[5]>0?'up':'down'}">${(r[5]>0?'+':'−')+moneyK(Math.abs(r[5]))}</span>`,r[6]]),
+    ['Total','','',moneyK(1620),moneyK(1500),'<span class="delta up">+$120K</span>','$78K'])})}
+  </div>`;
+
+/* ---------- 7. Procurement ---------- */
+S.proc = () => {
+  const renewals = [
+    ['Grafana Cloud Pro','Grafana Labs','25 Aug 2026',28,110,72,'High'],
+    ['Microsoft Enterprise Agreement','Microsoft','28 Sep 2026',62,640,84,'Critical'],
+    ['Figma Organisation','Figma','30 Sep 2026',64,16,88,'Low'],
+    ['Atlassian cloud bundle','Atlassian','31 Oct 2026',95,64,69,'Medium'],
+    ['Miro Business','Miro','12 Nov 2026',107,8,37,'Medium'],
+    ['Google Cloud commitment','Google Cloud','31 Dec 2026',156,130,78,'Medium']
+  ];
+  return head('Procurement','Vendors, contracts and the negotiating position on each one.','Persona · Procurement')
+  + `<div class="grid">
+  ${kpi({k:'Total vendor spend',v:money(D.ytdActual),hero:true,foot:'34 vendors, YTD'})}
+  ${kpi({k:'Vendors',v:'34',foot:'Top 10 = 82% of spend'})}
+  ${kpi({k:'Active contracts',v:'21',foot:'13 vendors on consumption pricing'})}
+  ${kpi({k:'Renewals in 90 days',v:'3',delta:moneyK(766)+' contract value',dir:'up'})}
+  ${kpi({k:'Contract value under management',v:money(1492),foot:'Committed across 21 contracts'})}
+  ${kpi({k:'Negotiation opportunities',v:'4 vendors',delta:'utilisation below 75%',dir:'flat'})}
+  ${kpi({k:'Potential contract savings',v:moneyK(21),delta:'renegotiation only',dir:'gup'})}
+  ${kpi({k:'Consolidation savings',v:moneyK(39),delta:'seats + duplicates',dir:'gup'})}
+
+  ${card({span:12,title:'Renewal calendar',hint:'Next 180 days',pad:false,body:table(
+    [{t:'Contract'},{t:'Vendor'},{t:'Renewal date'},{t:'Days out',r:true},{t:'Contract value',r:true},{t:'Utilisation',r:true},{t:'Priority'},{t:'Position'}],
+    renewals.map(r=>[`<b>${r[0]}</b>`,r[1],`<span class="mono">${r[2]}</span>`,String(r[3]),moneyK(r[4]),utilCell(r[5]),sevBadge(r[6]),
+      `<span class="sub">${r[5]<60?'True down before signing':r[5]<80?'Negotiate on utilisation':'Renew as is, seek volume tier'}</span>`]),
+    null),
+    note:'<b>Grafana renews in 28 days at 72% utilisation.</b> Open the conversation this week or the leverage disappears.'})}
+
+  ${card({span:12,title:'Vendor spend',hint:'Top 10',pad:false,body:table(
+    [{t:'Vendor'},{t:'Category'},{t:'YTD spend',r:true},{t:'Contract value',r:true},{t:'Start'},{t:'Renewal'},{t:'Utilisation',r:true},{t:'Owner'},{t:'Risk'}],
+    D.vendors.map(v=>[`<b>${v.k}</b>`,`<span class="sub">${v.cat}</span>`,moneyK(v.v),moneyK(v.contract),
+      `<span class="mono">${v.start}</span>`,`<span class="mono">${v.renew}</span>`,utilCell(v.util),v.owner,riskBadge(v.risk)]),
+    ['Top 10 vendors','',moneyK(1326),moneyK(1492),'','','82% of spend','','']),
+    note:'Risk here means <b>renewal risk</b>: high spend, low utilisation, or a date close enough that switching is no longer realistic.'})}
+
+  ${card({span:6,title:'Procurement opportunities',pad:false,body:`<div class="rows">
+    ${[['Microsoft EA volume tier','Combined Azure, M365 and security spend qualifies for the next tier',15],
+       ['Atlassian two-year commitment','Trades flexibility for a 12% discount',6],
+       ['Consolidate AI vendors from 6 to 3','Coverage overlaps on 18 employees',28],
+       ['Retire duplicate whiteboard tools','Miro and Lucidchart, 48 seats, 17 active',11],
+       ['AWS Savings Plan coverage 58% → 85%','$141K of compute is still on-demand',15]]
+      .map(r=>`<div class="row"><div class="grow"><div class="t">${r[0]}</div><div class="d">${r[1]}</div></div>
+      <div class="v">${moneyK(r[2])}</div></div>`).join('')}</div>`})}
+  ${card({span:6,title:'Alerts',pad:false,body:`<div class="rows">
+    ${[['Critical','Microsoft Enterprise Agreement expires in 62 days','$640K contract value, 84% utilised'],
+       ['High','Grafana renewal due in 28 days','72% utilised — true down 7 seats first'],
+       ['High','Claude Enterprise utilisation only 54%','35 seats purchased, 19 active'],
+       ['Medium','Perplexity Enterprise at 47%','22 seats, renewal 30 Apr 2027 — no action until Q1'],
+       ['Medium','Miro at 37%','Overlaps Lucidchart; retire one before 12 Nov']]
+      .map(r=>`<div class="row">${sevBadge(r[0])}<div class="grow"><div class="t">${r[1]}</div><div class="d">${r[2]}</div></div></div>`).join('')}</div>`})}
+  </div>`;
+};
+
+/* ---------- 8. Business / product ---------- */
+S.product = () => {
+  const P = D.products.filter(p=>p.rev>0);
+  return head('Product technology cost','What each product costs to run, and what that does to its margin.','Persona · Business / Product')
+  + `<div class="grid">
+  ${kpi({k:'Product Alpha · technology cost',v:money(468),delta:signed(468-430)+' vs budget',dir:'up',hero:true,foot:'Your product · YTD'})}
+  ${kpi({k:'Budget',v:money(430),foot:'Phased, 11 months'})}
+  ${kpi({k:'Cloud',v:moneyK(241),delta:'51% of product cost',dir:'flat'})}
+  ${kpi({k:'AI',v:moneyK(61),delta:'+64% since January',dir:'up'})}
+  ${kpi({k:'Shared technology allocated',v:moneyK(36),foot:'By headcount'})}
+  ${kpi({k:'Cost per customer',v:'$6.32K',delta:'74 customers',dir:'flat'})}
+  ${kpi({k:'Cost per transaction',v:'$0.024',delta:'−9.1% QoQ',dir:'down'})}
+  ${kpi({k:'Technology as % of revenue',v:'15.1%',delta:'target under 18%',dir:'gup'})}
+
+  ${card({span:12,title:'Product profit and loss',hint:'Technology cost only',pad:false,body:table(
+    [{t:'Product'},{t:'Revenue',r:true},{t:'Cloud',r:true},{t:'AI',r:true},{t:'SaaS',r:true},{t:'Other tech',r:true},{t:'Total tech',r:true},{t:'Gross margin',r:true},{t:'Tech % of revenue',r:true}],
+    P.map(p=>[`<b>${p.k}</b>`,money(p.rev),moneyK(p.cloud),moneyK(p.ai),moneyK(p.saas),moneyK(p.other),
+      `<b>${moneyK(p.v)}</b>`,pct((p.rev-p.v)/p.rev*100),
+      `<span class="delta ${p.v/p.rev>0.25?'up':'down'}">${pct(p.v/p.rev*100)}</span>`]),
+    ['Four products',money(6150),moneyK(645),moneyK(172),moneyK(244),moneyK(223),`<b>${moneyK(1284)}</b>`,'79.1%','20.9%']),
+    note:'<b>Product Delta</b> spends 62.9% of its revenue on technology. That is normal for a product this young, but it needs a date on which it stops being normal.'})}
+
+  ${card({span:8,title:'Technology cost by product',hint:'Monthly, stacked',body:stackedBars(D.meta.months.slice(0,11),[
+    {name:'Product Alpha',values:[34,36,39,42,38,44,42,46,44,50,53],color:'--g1'},
+    {name:'Product Beta',values:[27,28,30,31,30,33,32,34,32,37,37],color:'--g3'},
+    {name:'Product Gamma',values:[21,22,24,25,23,27,25,29,27,32,34],color:'--g5'},
+    {name:'Product Delta',values:[12,13,14,15,14,16,15,17,16,21,23],color:'--g7'}
+  ]),note:'All four products stepped up in May. Only <b>Alpha</b> and <b>Beta</b> grew revenue in the same month.'})}
+  ${card({span:4,title:'Cost per customer',pad:false,body:`<div class="rows">
+    ${P.map(p=>`<div class="row"><div class="grow"><div class="t">${p.k}</div>
+      <div class="d">${p.cust} customers · ${money(p.rev)} revenue</div>
+      <div style="margin-top:6px">${meter(Math.min(100,(p.v/p.cust)/40*100), p.v/p.cust>20?'bad':p.v/p.cust>10?'warn':'good')}</div></div>
+      <div class="v">$${(p.v/p.cust).toFixed(2)}K</div></div>`).join('')}</div>`,
+    note:'Cost per customer ranges from <b>$6.3K</b> to <b>$22K</b> — a 3.5× spread that pricing does not currently reflect.'})}
+
+  ${insight({q:'What',span:4,text:'Alpha costs <b>$468K</b> to run — <b>$38K over</b> its phased budget and <b>15.1%</b> of revenue.'})}
+  ${insight({q:'Why',tone:'warn',span:4,text:'The overrun is <b>$26K</b> of launch infrastructure that was never de-provisioned, plus <b>$12K</b> of AI experimentation.'})}
+  ${insight({q:'Do',tone:'act',span:4,text:'Terminate the three idle production instances and Alpha returns to plan by <b>September</b>. Nothing else needs to change.'})}
+  </div>`;
+};
+
+/* ---------- 9. Optimisation hub ---------- */
+S.optimize = () => {
+  const byStatus = ['Identified','Under review','Approved','In progress','Implemented'];
+  const counts = byStatus.map(s=>({k:s,v:D.opps.filter(o=>o.st===s).reduce((a,o)=>a+o.s,0)}));
+  return head('Optimisation hub','One backlog for every saving, with an owner and a date on each line.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Total identified savings',v:money(D.identified),delta:'13.2% of technology spend',dir:'gup',hero:true,foot:'16 opportunities'})}
+  ${kpi({k:'Realised savings',v:money(D.realized),delta:'45% conversion',dir:'gup',foot:'Banked this year'})}
+  ${kpi({k:'Approved, not yet done',v:moneyK(64),delta:'4 items',dir:'flat'})}
+  ${kpi({k:'Low-effort savings',v:moneyK(119),delta:'9 items',dir:'gup',foot:'No engineering sprint needed'})}
+  ${byStatus.slice(0,4).map((s,i)=>kpi({k:s,v:moneyK(counts[i].v),foot:D.opps.filter(o=>o.st===s).length+' items'})).join('')}
+
+  ${card({span:12,title:'Optimisation backlog',hint:'All 16 opportunities',pad:false,body:table(
+    [{t:'Opportunity'},{t:'Category'},{t:'Effort'},{t:'Confidence'},{t:'Owner'},{t:'Target date'},{t:'Status'},{t:'Annual saving',r:true}],
+    D.opps.map(o=>[`<b>${o.o}</b>`,o.cat,o.eff,o.conf,o.owner,`<span class="mono">${o.due}</span>`,stBadge(o.st),moneyK(o.s)]),
+    ['16 opportunities','','','','','','',money(D.identified)]),
+    note:'Every line has one owner and one date. Anything without both is not an opportunity, it is an observation.'})}
+
+  ${card({span:6,title:'Savings by category',pad:false,body:hbars(D.savingsByCat)})}
+  ${card({span:6,title:'Realised versus identified',body:`
+    <div class="rows" style="margin:-12px -14px -14px">
+    ${[['Q1 · Aug–Oct',48,42],['Q2 · Nov–Jan',56,31],['Q3 · Feb–Apr',62,19],['Q4 · May–Jul',48,4]]
+      .map(r=>`<div class="row"><div class="grow"><div class="t">${r[0]}</div>
+      <div class="d">Identified ${moneyK(r[1])} · realised ${moneyK(r[2])} · ${Math.round(r[2]/r[1]*100)}% conversion</div>
+      <div style="margin-top:6px;position:relative;height:6px;background:var(--surface-2);border-radius:2px">
+        <i style="position:absolute;inset:0;width:${r[1]/62*100}%;background:var(--g6);border-radius:2px"></i>
+        <i style="position:absolute;inset:0;width:${r[2]/62*100}%;background:var(--pos);border-radius:2px"></i>
+      </div></div><div class="v">${Math.round(r[2]/r[1]*100)}%</div></div>`).join('')}</div>`,
+    note:'Conversion falls the closer an opportunity is to today — recent items simply have not had time to land. Watch the <b>Q2</b> figure: 55% is the honest steady state.'})}
+  </div>`;
+};
+
+/* ---------- 10. Cost allocation ---------- */
+S.allocation = () => head('Cost allocation','How much of the bill can be traced to something that owns it.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Allocation coverage',v:'94.6%',delta:'target 98%',dir:'gdown',hero:true,foot:money(1533)+' of '+money(1620)})}
+  ${kpi({k:'Allocated spend',v:money(1533)})}
+  ${kpi({k:'Unallocated spend',v:money(87),delta:'141 resources',dir:'up'})}
+  ${kpi({k:'Tagging compliance',v:'91.3%',delta:'+4.2 pts QoQ',dir:'gup',foot:'2,614 of 2,863 resources fully tagged'})}
+
+  ${card({span:5,title:'Why spend is unallocated',hint:'Primary missing tag',pad:false,body:table(
+    [{t:'Missing tag'},{t:'Resources',r:true},{t:'Spend',r:true},{t:'Share of gap',r:true}],
+    D.tagging.map(t=>[t.k,String(t.res),moneyK(t.v),share(t.v,87)]),
+    ['Total','141',moneyK(87),'100%']),
+    note:'249 resources are missing at least one tag, but only these <b>141</b> are missing one that blocks allocation. A policy on <b>62 resources</b> recovers nearly half the gap.'})}
+  ${card({span:7,title:'Allocation by dimension',pad:false,body:table(
+    [{t:'Dimension'},{t:'Allocated',r:true},{t:'Unallocated',r:true},{t:'Coverage',r:true},{t:'Owner of the gap'}],
+    [['Product',1533,87,94.6,'S. Menon · platform team'],
+     ['Department',1553,67,95.9,'S. Menon · platform team'],
+     ['Cost centre',1521,99,93.9,'A. Iyer · finance'],
+     ['Environment',1583,37,97.7,'S. Menon · platform team'],
+     ['Application',1462,158,90.2,'N. Rao · product engineering'],
+     ['Owner',1502,118,92.7,'R. Kadavan · IT']].map(r=>[
+      r[0],moneyK(r[1]),moneyK(r[2]),`<span class="delta ${r[3]>95?'gup':'gdown'}">${r[3].toFixed(1)}%</span>`,`<span class="sub">${r[4]}</span>`]),
+    null),
+    note:'<b>Application</b> is the weakest dimension at 90.2% — which is why per-application unit cost is still an estimate.'})}
+
+  ${card({span:12,title:'Allocation by department and product',hint:'Shared cost spread by headcount',pad:false,body:table(
+    [{t:'Department'},{t:'Direct spend',r:true},{t:'Shared allocated',r:true},{t:'Total',r:true},{t:'Headcount',r:true},{t:'Per employee',r:true},{t:'Coverage',r:true}],
+    [['Engineering',698,114,812,22,36.9,97.1],['Security / IT',216,32,248,4,62.0,99.2],
+     ['Product',183,31,214,6,35.7,96.4],['Sales',78,18,96,7,13.7,98.0],
+     ['Operations',58,14,72,5,14.4,97.5],['Marketing',46,12,58,3,19.3,96.8],
+     ['Finance',24,7,31,2,15.5,99.0],['HR',16,6,22,1,22.0,100.0],
+     ['Unallocated',67,0,67,0,0,0]].map(r=>[
+      r[0],moneyK(r[1]),r[2]?moneyK(r[2]):'—',`<b>${moneyK(r[3])}</b>`,r[4]||'—',r[5]?'$'+r[5].toFixed(1)+'K':'—',
+      r[6]?utilCell(Math.round(r[6])):'<span class="badge crit">No owner</span>']),
+    ['Total',moneyK(1386),moneyK(234),`<b>${moneyK(1620)}</b>`,'50','$32.4K','94.6%'])})}
+  </div>`;
+
+/* ---------- 11. Forecasting ---------- */
+S.forecast = () => head('Budget and forecasting','Where this lands by year-end, under four sets of assumptions.','Persona · Finance + ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Baseline year-end forecast',v:money(1780),delta:signed(1780-1640)+' vs budget',dir:'up',hero:true,foot:'Current run-rate'})}
+  ${kpi({k:'Next month · July',v:moneyK(160),delta:'includes '+moneyK(22)+' of renewals',dir:'flat'})}
+  ${kpi({k:'Next quarter · Aug–Oct',v:moneyK(504),delta:'+4.1% vs May–Jul',dir:'up'})}
+  ${kpi({k:'Forecast accuracy',v:'94.2%',delta:'rolling 3-month',dir:'gup'})}
+
+  ${card({span:8,title:'Forecast with confidence range',hint:'Actual to June, projected to October',body:bandChart({}),
+    note:'The range widens from <b>±4%</b> in July to <b>±14%</b> by October, almost entirely because AI consumption is not under a commitment.'})}
+  ${card({span:4,title:'Scenarios',pad:false,body:`<div class="rows">
+    ${D.scenarios.map(s=>`<div class="row"><div class="grow"><div class="t">${s.k}</div><div class="d">${s.d}</div>
+      <div style="margin-top:6px">${meter((s.v-1600)/400*100, s.v<=1690?'good':s.v<=1800?'warn':'bad')}</div></div>
+      <div class="v">${money(s.v)}<div class="d" style="font-weight:400">${signed(s.v-1640)}</div></div></div>`).join('')}</div>`,
+    note:'Only the <b>Optimisation</b> scenario lands inside the approved <b>$1.64M</b> budget, and it requires the full backlog delivered by October.'})}
+
+  ${card({span:6,title:'Forecast drivers',hint:'Effect on year-end',pad:false,body:table(
+    [{t:'Driver'},{t:'Assumption'},{t:'Change',r:true},{t:'Effect on year-end',r:true}],
+    [['AI usage','Token volume follows the May–June trend',22,68],
+     ['Cloud workloads','Two new production services in Beta',14,52],
+     ['Employee count','50 → 54 by October',8,26],
+     ['SaaS optimisation','Seat reclamation completes in August',-7,-24],
+     ['Reserved capacity','Savings Plan coverage reaches 85%',-11,-38]].map(r=>[
+      `<b>${r[0]}</b>`,`<span class="sub">${r[1]}</span>`,
+      `<span class="delta ${r[2]>0?'up':'down'}">${r[2]>0?'+':''}${r[2]}%</span>`,
+      `<span class="delta ${r[3]>0?'up':'down'}">${r[3]>0?'+':'−'}${moneyK(Math.abs(r[3]))}</span>`]),
+    ['Net effect','','','<span class="delta up">+$84K</span>'])})}
+  ${card({span:6,title:'Budget request · next fiscal year',pad:false,body:table(
+    [{t:'Category'},{t:'FY26 actual+forecast',r:true},{t:'FY27 request',r:true},{t:'Change',r:true},{t:'Rationale'}],
+    [['Cloud infrastructure',702,748,6.6,'Growth net of commitment savings'],
+     ['SaaS and licences',318,296,-6.9,'Seat reclamation and consolidation'],
+     ['AI and LLM',251,340,35.5,'Product AI features in Beta and Gamma'],
+     ['Security',215,232,7.9,'Sentinel volume grows with the estate'],
+     ['Observability',108,102,-5.6,'Cardinality and retention work'],
+     ['ITSM',62,64,3.2,'Headcount'],
+     ['Device management',52,58,11.5,'Four new starters, refresh cycle'],
+     ['Other technology',72,74,2.8,'—']].map(r=>[
+      r[0],moneyK(r[1]),moneyK(r[2]),
+      `<span class="delta ${r[3]>0?'up':'down'}">${r[3]>0?'+':''}${r[3].toFixed(1)}%</span>`,`<span class="sub">${r[4]}</span>`]),
+    ['Total',money(1780),money(1914),'<span class="delta up">+7.5%</span>','']),
+    note:'The ask is <b>+7.5%</b> overall, but AI alone is <b>+35.5%</b> and everything else is roughly flat. That is the conversation to have.'})}
+  </div>`;
+
+/* ---------- 12. Anomalies ---------- */
+S.anomalies = () => head('Cost anomaly detection','Unexpected movement, with a plain-language explanation attached.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Open anomalies',v:'6',delta:'1 critical, 3 high',dir:'up',hero:true,foot:'Last 60 days'})}
+  ${kpi({k:'Unexpected spend',v:moneyK(16.2),delta:'vs '+moneyK(37.5)+' expected',dir:'up'})}
+  ${kpi({k:'Mean time to explain',v:'1.8 days',delta:'−0.6 days',dir:'down'})}
+  ${kpi({k:'Resolved this month',v:'2 of 6',delta:moneyK(1.3)+' recovered',dir:'gup'})}
+
+  ${card({span:12,title:'Detected anomalies',pad:false,body:table(
+    [{t:'Detected'},{t:'Provider'},{t:'Product'},{t:'Service'},{t:'Expected',r:true},{t:'Actual',r:true},{t:'Variance',r:true},{t:'Severity'},{t:'Owner'},{t:'Status'}],
+    D.anomalies.map(a=>[`<span class="mono">${a.d}</span>`,a.prov,a.prod,a.svc,moneyK(a.exp),`<b>${moneyK(a.act)}</b>`,
+      `<span class="delta up">+${Math.round((a.act-a.exp)/a.exp*100)}%</span>`,sevBadge(a.sev),a.owner,badge(a.st,a.st==='Resolved'?'ok':a.st==='Fix deployed'?'med':'high')]),
+    ['6 anomalies','','','',moneyK(37.5),moneyK(53.7),'<span class="delta up">+43%</span>','','',''])})}
+
+  ${D.anomalies.slice(0,4).map(a=>card({span:6,title:a.svc+' · '+a.prod,hint:a.d,body:`
+    <div style="display:flex;gap:14px;align-items:baseline;margin-bottom:9px">
+      ${sevBadge(a.sev)}
+      <div><span class="kpi-k">Expected</span><div class="num" style="font-size:15px">${moneyK(a.exp)}</div></div>
+      <div><span class="kpi-k">Actual</span><div class="num" style="font-size:15px;font-weight:600">${moneyK(a.act)}</div></div>
+      <div><span class="kpi-k">Variance</span><div class="num delta up" style="font-size:15px">+${Math.round((a.act-a.exp)/a.exp*100)}%</div></div>
+    </div>
+    <div class="insight" style="border-left-color:var(--info)"><div class="q">Explained</div><p>${a.why}</p></div>`,
+    note:`Owner <b>${a.owner}</b> · status <b>${a.st}</b>`})).join('')}
+
+  ${card({span:12,title:'Resource detail',hint:'Drilled from the AWS anomaly',pad:false,body:`
+    <div style="padding:12px 14px"><div class="path">
+      ${['Total technology','Cloud','AWS','Product Alpha','Production','Compute','EC2',D.resource.name]
+        .map((d,i,ar)=>`${i?'<span class="sep">/</span>':''}<button class="${i===ar.length-1?'on':''}">${d}</button>`).join('')}
+    </div></div>
+    ${table([{t:'Field'},{t:'Value'},{t:'Field'},{t:'Value'}],[
+      ['Resource name',`<span class="mono">${D.resource.name}</span>`,'Current month',`<b>${moneyK(D.resource.cur)}</b>`],
+      ['Resource ID',`<span class="mono">${D.resource.id}</span>`,'Previous month',moneyK(D.resource.prev)],
+      ['Owner',D.resource.owner,'Change','<span class="delta up">+85.7%</span>'],
+      ['Product',D.resource.product,'Average CPU',`<span class="delta gdown">${D.resource.util}%</span>`],
+      ['Environment',D.resource.env,'Recommendation',`<b>${D.resource.rec}</b>`],
+      ['Cost centre',`<span class="mono">${D.resource.cc}</span>`,'Potential saving',`<b>${moneyK(D.resource.save)}</b> / month`]
+    ])}`,
+    note:'The bottom of the drill path: one instance, one owner, one decision. All three instances in this group come to <b>$34K a year</b>.'})}
+  </div>`;
+
+/* ---------- 13. Security ---------- */
+S.security = () => head('Security cost','What protection costs, and which product is driving the ingestion bill.','Persona · ITFM + Security')
+  + `<div class="grid">
+  ${kpi({k:'Total security spend',v:money(197),delta:'12.2% of technology spend',dir:'flat',hero:true,foot:'YTD'})}
+  ${kpi({k:'Security cost per employee',v:'$3.94K',delta:'+11.2% YoY',dir:'up'})}
+  ${kpi({k:'Sentinel ingestion',v:moneyK(78),delta:'+38% this month',dir:'up',foot:'1,840 GB YTD'})}
+  ${kpi({k:'Cost per GB ingested',v:'$42.40',delta:'−3.1% with commitment tier',dir:'down'})}
+  ${kpi({k:'Licence utilisation',v:'88%',delta:'6 seats unused',dir:'gdown'})}
+  ${kpi({k:'Security cost per product',v:'$33K',foot:'Average of 4 products'})}
+  ${kpi({k:'Data volume',v:'1,840 GB',delta:'+22% QoQ',dir:'up'})}
+  ${kpi({k:'Optimisation potential',v:moneyK(4.8),delta:'per month',dir:'gup'})}
+
+  ${card({span:5,title:'Security spend by platform',body:donut(D.security,{label:'Security YTD'})+legend(D.security,197)})}
+  ${card({span:7,title:'Sentinel ingestion by source',pad:false,body:table(
+    [{t:'Log source'},{t:'Product'},{t:'Volume GB',r:true},{t:'Monthly cost',r:true},{t:'Change',r:true},{t:'Verdict'}],
+    [['Application containers','Product Beta',612,3.1,38,'Debug logging left on'],
+     ['Azure activity','Shared services',384,1.9,4,'Required for audit'],
+     ['Endpoint telemetry','Shared services',298,1.5,6,'Required'],
+     ['Alpha application','Product Alpha',241,1.2,9,'Normal growth'],
+     ['Network flows','Shared services',186,0.9,2,'Required'],
+     ['Gamma application','Product Gamma',119,0.6,11,'Normal growth']].map(r=>[
+      r[0],r[1],r[2].toLocaleString(),moneyK(r[3]),
+      `<span class="delta ${r[4]>20?'up':'flat'}">+${r[4]}%</span>`,
+      r[5].startsWith('Debug')?`<b>${r[5]}</b>`:`<span class="sub">${r[5]}</span>`]),
+    ['Total','',(1840).toLocaleString(),moneyK(9.2),'<span class="delta up">+38%</span>','']),
+    note:'One release turned <b>Beta container logging</b> to debug on 9 June. It is now the single largest security cost line at <b>$3.1K a month</b>.'})}
+
+  ${insight({q:'Do',tone:'act',span:12,text:'Set Beta containers back to warning level and add a log-level check to the release pipeline. <b>$4,800 a month</b>, one configuration change, no security coverage lost.'})}
+  </div>`;
+
+/* ---------- 14. Observability ---------- */
+S.obs = () => head('Observability cost','What monitoring costs per product, measured against the traffic it monitors.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Total observability spend',v:money(99),delta:'6.1% of technology spend',dir:'flat',hero:true,foot:'Grafana Cloud, YTD'})}
+  ${kpi({k:'Cost per GB',v:'$18.30',delta:'−5.2% QoQ',dir:'down'})}
+  ${kpi({k:'Log volume',v:'2,410 GB',delta:'+18% QoQ',dir:'up'})}
+  ${kpi({k:'Metric series',v:'4.8M',delta:'+34% QoQ',dir:'up',foot:'Cardinality growing faster than traffic'})}
+  ${kpi({k:'Trace spans',v:'1.2B'})}
+  ${kpi({k:'Retention cost',v:moneyK(9),delta:'90-day default',dir:'flat'})}
+  ${kpi({k:'Seat utilisation',v:'71%',delta:'17 of 24 seats',dir:'gdown'})}
+  ${kpi({k:'Optimisation potential',v:moneyK(18),delta:'18.2% of line',dir:'gup'})}
+
+  ${card({span:5,title:'Spend by signal',body:donut(D.obs,{label:'Observability YTD'})+legend(D.obs,99)})}
+  ${card({span:7,title:'Data share versus traffic share',hint:'The gap is the problem',pad:false,body:table(
+    [{t:'Product'},{t:'Observability cost',r:true},{t:'Share of data',r:true},{t:'Share of traffic',r:true},{t:'Gap',r:true}],
+    D.obsByProduct.map(p=>[p.k,moneyK(p.v),p.share+'%',p.traffic+'%',
+      `<span class="delta ${p.share-p.traffic>5?'up':p.share-p.traffic<-5?'down':'flat'}">${p.share-p.traffic>0?'+':''}${p.share-p.traffic} pts</span>`]),
+    ['Total',moneyK(99),'100%','100%','']),
+    note:'<b>Product Gamma generates 31% of observability data but carries 12% of customer traffic.</b> High-cardinality labels on a single metrics endpoint account for most of it — about <b>$18K a year</b>.'})}
+
+  ${insight({q:'Do',tone:'act',span:12,text:'Drop three high-cardinality labels on Gamma metrics (<b>$12K</b>) and cut non-production log retention from 90 to 30 days (<b>$6K</b>). Both are reversible, both take a day.'})}
+  </div>`;
+
+/* ---------- 15. ITSM ---------- */
+S.itsm = () => head('ITSM financial insights','Jira operations joined to the cost of running the services behind them.','Persona · ITFM')
+  + `<div class="grid">
+  ${kpi({k:'Total ITSM cost',v:money(57),delta:'3.5% of technology spend',dir:'flat',hero:true,foot:'YTD'})}
+  ${kpi({k:'Cost per ticket',v:'$17.90',delta:'+4.2% QoQ',dir:'up',foot:'3,180 tickets'})}
+  ${kpi({k:'Response cost per incident',v:'$58',delta:'412 incidents',dir:'flat',foot:'$24.1K infrastructure response cost'})}
+  ${kpi({k:'Cost per change',v:'$41',delta:'286 changes',dir:'flat',foot:'Weighted 2.3× a service request'})}
+
+  ${card({span:8,title:'Ticket volume',hint:'Monthly',body:lineChart([
+    {name:'Tickets',values:D.itsm.volume.concat([null]),color:'--g1',dots:true,area:true}
+  ],D.meta.months,{max:360,fmt:v=>Math.round(v)}),
+    note:'Volume is flat while cost per ticket rises — the cost increase is licence and tooling, not workload.'})}
+  ${card({span:4,title:'Incidents and infrastructure cost',pad:false,body:table(
+    [{t:'Product'},{t:'Tickets',r:true},{t:'Incidents',r:true},{t:'Response cost',r:true}],
+    D.itsm.byProduct.map(p=>[p.k,p.t.toLocaleString(),String(p.inc),moneyK(p.cost)]),
+    ['Total','3,180','412',moneyK(24.1)]),
+    note:'<b>Product Alpha</b> had 34 incidents this year; the infrastructure cost of responding to them was <b>$8,400</b>.'})}
+
+  ${card({span:12,title:'Where operations and cost meet',pad:false,body:table(
+    [{t:'Product'},{t:'Incidents',r:true},{t:'Cloud utilisation',r:true},{t:'Observability data',r:true},{t:'Technology cost',r:true},{t:'Reading'}],
+    [['Product Alpha',34,'68%','26%',468,'Low incident rate at high utilisation — well run'],
+     ['Product Beta',118,'54%','24%',351,'High incidents and low utilisation — instability, not capacity'],
+     ['Product Gamma',96,'47%','31%',289,'Most data, fewest customers — monitoring is over-instrumented'],
+     ['Product Delta',41,'39%','8%',176,'Early stage; incident rate expected'],
+     ['Internal IT',123,'—','11%',67,'Mostly access requests, not outages']].map(r=>[
+      `<b>${r[0]}</b>`,String(r[1]),r[2],r[3],moneyK(r[4]),`<span class="sub">${r[5]}</span>`]),
+    null),
+    note:'<b>Beta</b> is the one to act on: three times Alpha\'s incidents on lower utilisation. Adding capacity would not fix it.'})}
+  </div>`;
+
+/* ---------- 16. Alerts ---------- */
+S.alerts = () => head('Alerts','Everything that needs a decision, with the money attached to it.','All personas')
+  + `<div class="grid">
+  ${kpi({k:'Open alerts',v:'7',delta:'1 critical, 3 high',dir:'up',hero:true})}
+  ${kpi({k:'Financial impact this month',v:moneyK(10.9),delta:'above forecast',dir:'up'})}
+  ${kpi({k:'Savings attached',v:moneyK(109.8),delta:'if all actioned',dir:'gup'})}
+  ${kpi({k:'Oldest open alert',v:'11 days',delta:'Sentinel ingestion',dir:'up'})}
+
+  ${card({span:12,title:'Alert feed',pad:false,body:`<div class="rows">
+    ${D.alerts.map(a=>`<div class="row">
+      <div style="min-width:70px">${sevBadge(a.sev)}</div>
+      <div class="grow"><div class="t">${a.t}</div>
+        <div class="d">${a.prod} · owner ${a.owner} · <b style="color:var(--ink-2)">${a.act}</b></div></div>
+      <div class="v" style="min-width:88px">${a.impact?moneyK(a.impact):'—'}<div class="d" style="font-weight:400">impact / mo</div></div>
+      <div class="v" style="min-width:88px;color:var(--pos)">${moneyK(a.save)}<div class="d" style="font-weight:400">saving / yr</div></div>
+    </div>`).join('')}</div>`,
+    note:'Sorted by severity, not by date. An alert without a recommended action and an owner is noise.'})}
+  </div>`;
+
+/* ---------- 17. Data sources ---------- */
+S.sources = () => head('Data model','The twelve systems behind every number in this platform.','Reference')
+  + `<div class="grid">
+  ${card({span:12,title:'How a dollar becomes a decision',body:flowDiagram(),
+    note:'Cost data is meaningless until it carries a product, an owner and a cost centre. <b>Stage 03 is where the value is created</b> — everything after it is presentation.'})}
+
+  ${card({span:6,title:'Connected sources',pad:false,body:table(
+    [{t:'Source system'},{t:'Feeds'},{t:'Cadence'},{t:'Status'}],
+    [['AWS Cost & Usage Report','Cloud','Daily','Healthy'],
+     ['Azure Cost Management','Cloud','Daily','Healthy'],
+     ['Google Cloud Billing export','Cloud','Daily','Healthy'],
+     ['Microsoft 365 admin','SaaS · licences','Daily','Healthy'],
+     ['Microsoft Sentinel','Security','Daily','Healthy'],
+     ['Microsoft Purview','Security · compliance','Weekly','Healthy'],
+     ['AI provider APIs (5)','AI usage and tokens','Hourly','1 degraded'],
+     ['Jira','ITSM · engineering','Hourly','Healthy'],
+     ['Grafana Cloud','Observability','Daily','Healthy'],
+     ['SaaS vendor portals (9)','Licences','Monthly','3 manual'],
+     ['HR directory','Headcount · allocation','Daily','Healthy'],
+     ['Finance / ERP','Budget · actuals · GL','Monthly','Healthy']].map(r=>[
+      `<b>${r[0]}</b>`,`<span class="sub">${r[1]}</span>`,`<span class="mono">${r[2]}</span>`,
+      badge(r[3],r[3]==='Healthy'?'ok':r[3].includes('degraded')?'high':'med')]),
+    null),
+    note:'Three vendor portals still require a manual upload each month. That is where the reconciliation gap comes from.'})}
+  ${card({span:6,title:'Enrichment rules',pad:false,body:table(
+    [{t:'Rule'},{t:'Applies to'},{t:'Coverage',r:true}],
+    [['Product tag from resource tag','All cloud resources',94.6],
+     ['Product from Jira project mapping','Application costs',90.2],
+     ['Owner from HR directory','All resources',92.7],
+     ['Cost centre from department mapping','All spend',93.9],
+     ['Shared cost split by headcount','Shared services',100],
+     ['Amortise annual prepayments monthly','SaaS contracts',100],
+     ['Blend commitment discounts into unit rate','Cloud compute',100],
+     ['Attribute AI tokens to calling application','AI API spend',87.4]].map(r=>[
+      `<b>${r[0]}</b>`,`<span class="sub">${r[1]}</span>`,utilCell(Math.round(r[2]))]),
+    null),
+    note:'Any number in this platform can be traced back to one of these eight rules. When a figure looks wrong, the rule is usually the reason.'})}
+  </div>`;
+/* ============================================================
+   Navigation, filters, persona routing
+   ============================================================ */
+const NAV = [
+  ['Overview',[['overview','Executive overview'],['itfm','IT financial management'],['finance','Finance'],
+               ['proc','Procurement'],['product','Products']]],
+  ['Spend',[['cloud','Cloud'],['ai','AI'],['saas','SaaS & licences'],['security','Security'],
+            ['obs','Observability'],['itsm','ITSM']]],
+  ['Manage',[['forecast','Budgets & forecasts'],['allocation','Cost allocation'],['optimize','Optimisation'],
+             ['anomalies','Anomalies'],['alerts','Alerts']]],
+  ['Reference',[['sources','Data model']]]
+];
+const TITLES = {};
+NAV.forEach(g=>g[1].forEach(i=>TITLES[i[0]]=i[1]));
+
+const PERSONA = {
+  itfm:{home:'itfm', label:'IT Financial Management', focus:['itfm','cloud','ai','allocation','optimize','forecast']},
+  finance:{home:'finance', label:'Finance', focus:['finance','forecast','allocation','anomalies','overview']},
+  proc:{home:'proc', label:'Procurement', focus:['proc','saas','ai','optimize']},
+  biz:{home:'product', label:'Business / Product', focus:['product','ai','cloud','alerts']}
+};
+
+const FILTERS = [
+  ['Date range','FY26 · Aug–Jun',true],['Provider','All'],['Department','All'],['Product','All'],
+  ['Application','All'],['Environment','All'],['Cost centre','All'],['Vendor','All'],['Category','All']
+];
+
+let current = 'overview', persona = 'itfm';
+
+function renderNav(){
+  const p = PERSONA[persona];
+  document.getElementById('navgroups').innerHTML = NAV.map(g=>`
+    <div class="navgroup-label">${g[0]}</div>
+    ${g[1].map(i=>`<button class="navlink ${i[0]===current?'on':''}" data-go="${i[0]}">
+      <span class="navdot" style="${p.focus.includes(i[0])&&i[0]!==current?'background:var(--ink)':''}"></span>
+      <span>${i[1]}</span>${p.focus[0]===i[0]?'<span class="kbd">home</span>':''}</button>`).join('')}
+  `).join('');
+}
+
+function renderFilters(){
+  document.getElementById('filters').innerHTML =
+    FILTERS.map((f,i)=>`<button class="chip ${f[2]?'set':''}" data-chip="${i}">
+      <em>${f[0]}</em>${f[1]}${f[2]?'<span class="x">×</span>':''}</button>`).join('')
+    + `<span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-3)">
+       As of ${D.meta.asOf} · 12 sources · last sync 06:14</span>`;
+}
+
+function renderLedger(){
+  const cells = [
+    ['Spend YTD', money(D.ytdActual), ''],
+    ['Budget YTD', money(D.ytdBudget), ''],
+    ['Variance', '+'+money(D.ytdActual-D.ytdBudget), 'color:var(--neg)'],
+    ['Forecast year-end', money(D.fyForecast), ''],
+    ['Identified savings', money(D.identified), 'color:var(--pos)'],
+    ['Realised', money(D.realized), 'color:var(--pos)'],
+    ['Unallocated', money(D.unallocated), 'color:var(--warn)']
+  ];
+  const ops = ['','−','=','','','','·'];
+  document.getElementById('ledger').innerHTML = cells.map((c,i)=>
+    `${ops[i]?`<div class="ledger-op">${ops[i]}</div>`:''}
+     <div class="ledger-cell"><span class="ledger-k">${c[0]}</span>
+     <span class="ledger-v" style="${c[2]}">${c[1]}</span></div>`).join('');
+}
+
+function renderCrumbs(){
+  const p = PERSONA[persona];
+  document.getElementById('crumbs').innerHTML =
+    `Meridian <span>/</span> ${p.label} <span>/</span> <b>${TITLES[current]||''}</b>`;
+}
+
+function go(id){
+  if(!S[id]) id='overview';
+  current = id;
+  document.getElementById('screen').innerHTML = S[id]();
+  renderNav(); renderCrumbs();
+  window.scrollTo({top:0,behavior:'instant'});
+  if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+}
+
+document.addEventListener('click', e=>{
+  const nav = e.target.closest('[data-go]');
+  if(nav){ go(nav.dataset.go); return; }
+  const chip = e.target.closest('[data-chip]');
+  if(chip){ chip.classList.toggle('set'); return; }
+  const pathBtn = e.target.closest('.path button');
+  if(pathBtn){
+    pathBtn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+    pathBtn.classList.add('on');
+  }
+});
+
+document.getElementById('persona').addEventListener('change', e=>{
+  persona = e.target.value;
+  go(PERSONA[persona].home);
+});
+
+renderFilters(); renderLedger();
+go(location.hash.slice(1) || 'overview');
+
+</script>
+</body>
+</html>

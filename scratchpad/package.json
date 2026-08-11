@@ -1,0 +1,15 @@
+{
+  "name": "scratchpad",
+  "version": "1.0.0",
+  "description": "Not part of the mock-up. Nothing in `finoptic/` loads anything from here; these are\r the scripts that generate or verify it. Safe to delete, at the cost of having to\r rewrite them.",
+  "main": "build-finn-logo.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}
