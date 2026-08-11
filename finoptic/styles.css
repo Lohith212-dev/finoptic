@@ -1622,14 +1622,31 @@ tbody tr:last-child td{border-bottom:0}
    numeric column, which is what finally got the last two dense tables inside
    their half-width cards. */
 th.r,td.r{padding-left:6px}
+/* Where a right-aligned column is immediately followed by a left-aligned one,
+   BOTH sides read toward the shared border — the number's own trailing pad and
+   the text's own leading pad are all that separate them, while every other
+   seam in the row has whichever column's slack landed there working in its
+   favour.  That reads as a table crowded in one spot rather than as one laid
+   out on a grid: "the spacing between columns is off... crowded near the
+   separation." A few extra px of breathing room fixes the one seam that never
+   gets any on its own. */
+.tbl thead th.r + th:not(.r),
+.tbl tbody td.r + td:not(.r){padding-left:20px}
 tr.total td{border-top:1px solid var(--line-2); font-weight:600; background:var(--surface-2)}
 .tbl-scroll{overflow-x:auto}
 /* Interactive tables only. */
 .tbl-live tbody tr{cursor:pointer; transition:background .12s ease}
 .tbl-live tbody tr:hover{background:var(--surface-3)}
 .sub{color:var(--ink-3); font-size:11px}
-.namecell{display:flex; flex-direction:column; gap:1px}
+.namecell{display:flex; flex-direction:column; gap:1px; min-width:0}
 .namecell b{font-weight:600}
+/* Inside a table, both lines of a namecell get the SAME "refuses to wrap,
+   ellipsises instead" deal `.ent > b` already makes below — this is the case
+   that rule doesn't reach, because here the <b> is one level further in,
+   under .namecell rather than a direct child of .ent.  A column now capped by
+   width (table()'s tblColCaps, components.js) needs this or a long name would
+   wrap the row instead of truncating it. */
+.tbl .namecell b,.tbl .namecell .sub{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
 /* Entity cell (§2, §6) — a brand mark or a colour swatch next to the name, so
    the thing named in a table is the same colour it is in the chart.  Colour
@@ -2132,7 +2149,12 @@ svg{display:block; max-width:100%}
    owner column is narrow, and a name that wraps under its own avatar breaks the
    row rhythm the same way a wrapped vendor name does. */
 .pcell{display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:100%}
-.pcell-n{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+/* inline-block, not the plain inline a <span> defaults to — text-overflow has
+   no effect on an inline box, only a block-level one (or a flex item, which
+   personCell()'s .pcell already blockifies for free).  personName() prints
+   this span bare, with no flex parent, so without this the ellipsis this rule
+   already declares was never actually rendering — just the nowrap half. */
+.pcell-n{display:inline-block; max-width:100%; vertical-align:middle; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 /* The two-line variant, for lists rather than tables. */
 .pcell-stack{align-items:center; gap:10px}
 .pcell-stack .namecell{min-width:0}
@@ -5001,7 +5023,7 @@ html.pane-open{overflow:hidden; padding-right:var(--sbw,0px)}
    ========================================================================== */
 
 :root{
-  --finn-w:min(1080px, 82vw);      /* the surface, open */
+  --finn-w:min(1080px, 82vw);      /* the surface, open (floating panel) */
   --finn-h:min(760px, 82vh);
   --finn-bar-w:min(560px, calc(100vw - 48px));   /* the composer, at rest */
   --finn-z:70;
@@ -5161,7 +5183,18 @@ html[data-finn] .finn-veil{opacity:0; height:172px}
   box-shadow:var(--shadow-float), 0 0 0 1px rgba(11,18,32,.055);
 }
 html[data-finn] .finn-surface{display:flex}
-html[data-finn="full"]{--finn-w:calc(100vw - 32px); --finn-h:calc(100vh - 132px)}
+/* FULL SCREEN ONLY — the floating panel is still the default open state.
+   A round-17 pass made every open state edge-to-edge, which meant clicking the
+   composer always looked like it had jumped to full screen; round 18 confines
+   the full-page treatment to the maximise button alone, the only place it was
+   actually asked for. `full` drops .finn's own padding/gap so the surface truly
+   reaches the viewport edge; `open` keeps both, which is what makes it read as
+   a centred card instead. */
+html[data-finn="full"] .finn{padding:0; gap:0}
+html[data-finn="full"] .finn-surface{
+  width:100%; height:auto; flex:1 1 auto;
+  border-radius:0; box-shadow:none;
+}
 
 /* Grows from the dock, because that is what was clicked. Reached with
    animation-fill-mode backwards, so an interrupted run cannot strand it (§9.1). */
@@ -5211,7 +5244,20 @@ html[data-finn] .finn-surface{animation:finn-rise .22s cubic-bezier(.2,.7,.3,1) 
 
 /* Where the question was asked FROM. Above the question, because it qualifies
    what was asked: "the most expensive product" means something different under a
-   category filter, and an answer cannot say so retroactively. */
+   category filter, and an answer cannot say so retroactively.
+
+   PINNED TO THE SESSION, not repeated per turn (round 18) — a chat almost always
+   stays on one screen/filter/dataset, so restating the same three chips before
+   every single question read as noise. The one pinned copy lives in
+   `#finn-ctx-top` (index.html, styled below), a static bar between the header
+   and the thread — NOT `position:sticky` inside the scrolling thread, which was
+   tried first and doesn't actually work for this: a single sticky element
+   spanning many turns just parks at a fixed viewport y and visibly cuts through
+   whatever turn happens to scroll past underneath it, rather than releasing at
+   a section boundary the way a sticky date divider would. Sitting in the
+   surface's own static flex flow means it never overlaps anything; it simply
+   never scrolls. A plain `.finn-ctx` still reappears inline, on the turn
+   itself, the rare time the reader actually changed context mid-chat. */
 .finn-ctx{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:8px;
   justify-content:flex-end}
 .finn-ctx span{
@@ -5220,6 +5266,18 @@ html[data-finn] .finn-surface{animation:finn-rise .22s cubic-bezier(.2,.7,.3,1) 
 }
 .finn-ctx-s{color:var(--ink) !important; font-weight:600 !important}
 .finn-ctx-d{background:none !important; color:var(--ink-4) !important; padding-right:0 !important}
+/* The pinned copy reads left, like a header, rather than right like the
+   per-turn qualifier it's a modifier of. */
+.finn-ctx-pinned{justify-content:flex-start; margin-bottom:0}
+
+/* The bar itself: static, never scrolls, sits between .finn-h and .finn-thread.
+   :empty collapses it to nothing outside the thread view, where there is no one
+   chat's origin to pin — the greeting already says "You asked from…" inline. */
+.finn-ctx-top{
+  flex:none; padding:12px 22px; border-bottom:1px solid var(--line);
+}
+.finn-ctx-top:empty{display:none}
+.finn-ctx-top .finn-ctx{max-width:780px; margin-left:auto; margin-right:auto}
 
 /* The reader's own turn, right-aligned and tinted — the one asymmetry in the
    thread, and what makes it read as a conversation rather than as a document.
@@ -5503,10 +5561,18 @@ html[data-finn] .finn-surface{animation:finn-rise .22s cubic-bezier(.2,.7,.3,1) 
   padding-top:10px; border-top:1px solid var(--line); max-width:70ch}
 .fa-note b{color:var(--ink-2); font-weight:600}
 
-.fa-srcs{display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:16px}
-.fa-srcs-l{font:500 9.5px/1 var(--sans); color:var(--ink-3); margin-right:2px}
-.fa-src{font:400 10.5px/1 var(--sans); color:var(--ink-2); background:var(--surface-2);
-  padding:5px 7px; border-radius:var(--r-chip)}
+/* CLICKABLE TEXT, not chips (round 18) — a boxed-and-backgrounded source name
+   competed with `.finn-chip`, the control that actually matters, for the same
+   visual weight. This is a sentence now; each name is a real button (clicking
+   toasts its feed cadence and health) that reads as an inline link rather than
+   as a UI object of its own. */
+.fa-srcs{font:400 11px/1.6 var(--sans); color:var(--ink-3); margin-top:16px}
+.fa-src{
+  font:inherit; color:var(--ink-2); background:none; border:0; padding:0;
+  cursor:pointer; text-decoration:underline; text-decoration-color:var(--line-2);
+  text-underline-offset:2px;
+}
+.fa-src:hover{color:var(--ink); text-decoration-color:var(--ink-3)}
 
 /* Streaming: each block fades up as it lands. Finished IS the natural state, so a
    block with no animation is simply visible. */
@@ -5527,21 +5593,6 @@ html[data-finn] .finn-surface{animation:finn-rise .22s cubic-bezier(.2,.7,.3,1) 
   padding-top:12px; border-top:1px solid var(--line)}
 .finn-from b{color:var(--ink-2); font-weight:600}
 .finn-sect{font:500 9.5px/1 var(--sans); color:var(--ink-3); margin:20px 0 10px}
-
-/* The full catalogue, behind a link. Kept because a presenter needs to find a
-   question fast; demoted because it is not how anyone starts. */
-.finn-all{display:flex; flex-direction:column; gap:18px}
-.finn-cat-h2{font:700 12.5px/1.25 var(--sans); color:var(--ink); margin-bottom:2px;
-  padding-top:13px; border-top:1px solid var(--line); display:flex; align-items:center; gap:8px}
-.finn-cat-h2 .ic{width:14px; height:14px; color:var(--ink-3)}
-.finn-cat-h2 span{font:400 10.5px/1 var(--sans); color:var(--ink-3); font-weight:400}
-.finn-qs{display:flex; flex-direction:column; gap:1px; margin-top:6px}
-.finn-q{
-  text-align:left; background:none; border:0; cursor:pointer;
-  font:400 13px/1.45 var(--sans); color:var(--ink-2);
-  padding:8px 10px; border-radius:var(--r-chip); transition:background .15s ease, color .15s ease;
-}
-.finn-q:hover{background:var(--surface-2); color:var(--ink)}
 
 /* ---------- follow-ups and history ---------------------------------------- */
 .finn-next{display:flex; flex-wrap:wrap; gap:6px; align-items:center;
@@ -5580,6 +5631,20 @@ html[data-finn] .finn-surface{animation:finn-rise .22s cubic-bezier(.2,.7,.3,1) 
 /* ---------- the dock ------------------------------------------------------ */
 .finn-dock{width:var(--finn-bar-w); display:flex; flex-direction:column; gap:9px; flex:none}
 html[data-finn] .finn-dock{width:var(--finn-w); max-width:var(--finn-w)}
+/* Full screen only: the dock spans the full-page width like everything else in
+   the surface; the bar, its suggestions and the mode toggle below all cap at
+   the thread's own 780px measure and centre inside it, so the composer doesn't
+   stretch edge-to-edge on a wide screen even though the page around it does. */
+html[data-finn="full"] .finn-dock{width:100%; max-width:none; padding:0 24px 22px}
+/* Brief/Full used to be its own left-aligned row under a much wider bar, which
+   read as a stray control rather than part of the composer — "positioned near
+   the text-entry box rather than floating elsewhere" (round 18). Capping it to
+   the bar's own measure, unconditionally rather than only in full screen, welds
+   the two together in the floating panel too. Below --finn-bar-w (the resting,
+   closed composer) the cap never engages, so the docked pill is unaffected. */
+.finn-bar, .finn-sugg, .finn-mode{
+  width:100%; max-width:780px; margin-left:auto; margin-right:auto;
+}
 
 /* Suggestions rise OUT OF THE COMPOSER'S TOP EDGE, staggered — the one moment of
    real delight in the layer, and it is doing a job: three real questions is an
@@ -5732,8 +5797,18 @@ html[data-finn-busy] .finn-field textarea{color:var(--ink-3)}
    blades, and a face that never moves is a mask. Eight states, exactly one live at
    a time, driven by a class on `.finn-scope` — which is `#finn` itself, the element
    that already contains every place the mark is drawn (the surface header, each
-   answer's byline, the composer). So EVERY instance animates in lockstep off one
-   class swap, and no instance carries state of its own. Behaviour: assistant.js.
+   answer's byline, the composer). Behaviour: assistant.js.
+
+   ONLY THE ACTIVE MARK ANIMATES — a round-18 reversal of the original "every
+   instance in lockstep off one class swap" rule. That rule holds for exactly
+   one turn; once a thread has a scrollback, every past answer's byline creature
+   is also a descendant of `.finn-scope` and picked up whatever state was live,
+   so a long conversation showed a wall of past answers all breathing or
+   radiating at once — nothing marked which one Finn was actually doing anything
+   about. The exclusion rule below (after the state keyframes) freezes every
+   `.finn-mark` that belongs to a turn other than the last: the header and the
+   composer stay singular so they still animate off the shared class, and the
+   most recent turn is the only per-answer instance that ever can.
 
      docked      frozen. The composer is closed; Finn is furniture on a dashboard.
      alert       one pulse, once — docked's only exception, then back to frozen.
@@ -5853,6 +5928,14 @@ html[data-finn-busy] .finn-field textarea{color:var(--ink-3)}
 .finn-scope.summon .finn-mark .creature{animation:finn-sum .65s var(--spring) 1}
 @keyframes finn-sum{0%{transform:scale(.25); opacity:0} 45%{opacity:1}
   100%{transform:scale(1); opacity:1}}
+
+/* ONLY THE ACTIVE ANSWER'S MARK MAY ANIMATE. An exclusion rather than a rewrite
+   of every state selector above, so an eight-state system stays an eight-state
+   system and a ninth state added later inherits the rule for free. `:last-of-
+   type` is genuinely "the one being answered" — the moment a new question is
+   asked its turn is appended after this one, so this turn stops matching and
+   freezes on its own, no JS bookkeeping required. */
+.finn-turn:not(:last-of-type) .finn-mark *{animation:none !important; transition:none !important}
 
 /* ---------- narrow --------------------------------------------------------
    Below 900 the surface goes full-bleed and the reading column gives up its cap,

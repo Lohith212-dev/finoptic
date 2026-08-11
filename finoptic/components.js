@@ -796,11 +796,61 @@ function tableOrder(cols, rows){
     .map(x=>x.r);
 }
 
+/* ---- capping the two columns that ALWAYS blow up an auto-layout table ----
+   A table here sizes to its content (table-layout stays auto — see the note
+   above tbody tr on why rows do the same).  That is correct for a description
+   column, which genuinely needs the room.  It is wrong for the two shapes of
+   column that are short no matter what the row says: an ENTITY (an icon next
+   to a name, `.ent` — one line, or two when a subtitle rides under it) and a
+   PERSON (`.pcell`/`.pcell-n` — a name, occasionally "name · team").  Auto
+   layout hands 100%-width's leftover space to columns in proportion to how
+   much they already need, so the one column with a stacked name+subtitle, or
+   the one with a two-word team qualifier, is the column that ends up eating
+   it — which is what put 140px of dead air in front of every number on the
+   SaaS screen and made "Owner of the gap" the widest thing on the allocation
+   screen. `width`/`max-width` set directly on a `<td>` is silently IGNORED by
+   Chrome once the table is stretched to fill its card (checked against the
+   rendered page, not the spec — table-layout:auto simply does not honour it
+   there); a `<col>` in a `<colgroup>` is the only thing that does.  Measuring
+   the RENDERED cell rather than guessing a constant is the same bet
+   tableOrder() makes above: the cell is the only thing that cannot disagree
+   with itself, so a longer name in another scenario still gets the width it
+   needs instead of being clipped for one this table happened to ship with. */
+const TBL_CAP_PAD = 20;                 /* --pad-card, and also 2x the 10px cell pad */
+let tblCapBox = null;
+function tblColCaps(cols, rows){
+  const idxs = [];
+  cols.forEach((c,i)=>{ if(rows.some(r=>/class="(ent|pcell)/.test(String(r[i])))) idxs.push(i); });
+  if(!idxs.length) return null;
+  if(!tblCapBox){
+    tblCapBox = document.createElement('div');
+    tblCapBox.style.cssText = 'position:absolute; visibility:hidden; left:-9999px; top:-9999px; font-size:12px;';
+    document.body.appendChild(tblCapBox);
+  }
+  const caps = {};
+  idxs.forEach(i=>{
+    let max = 0;
+    rows.forEach(r=>{
+      const cell = document.createElement('div');
+      cell.style.whiteSpace = 'nowrap';
+      cell.innerHTML = String(r[i]);
+      cell.querySelectorAll('*').forEach(n=>{ n.style.whiteSpace = 'nowrap'; });
+      tblCapBox.appendChild(cell);
+      max = Math.max(max, cell.getBoundingClientRect().width);
+      cell.remove();
+    });
+    caps[i] = Math.ceil(max) + TBL_CAP_PAD;
+  });
+  return caps;
+}
+
 const table = (cols, rows, totalRow, o={}) => {
   if(rows.length===0)
     return emptyState('No Rows Match These Filters','Widen the period, or clear a filter in the bar above.');
   if(o.order !== 'keep') rows = tableOrder(cols, rows);
   const id = 'tb'+(++tblUid);
+  const caps = tblColCaps(cols, rows);
+  const colgroup = caps ? `<colgroup>${cols.map((c,i)=>caps[i]?`<col style="width:${caps[i]}px">`:'<col>').join('')}</colgroup>` : '';
   /* Suppressed under TBL_TOOLS_MIN rows — see the note on the constant in
      tablekit.js for why the threshold moved from four to two. */
   const live = rows.length >= TBL_TOOLS_MIN;
@@ -840,6 +890,7 @@ const table = (cols, rows, totalRow, o={}) => {
     </div>` : '';
   return `<div class="tbl" data-tbl="${id}">${tools}
     <div class="tbl-scroll"><table>
+    ${colgroup}
     <thead><tr>${head}</tr></thead>
     <tbody>${body}
     ${totalRow?`<tr class="total">${totalRow.map((c,i)=>`<td class="${cols[i].r?'r':''}">${c}</td>`).join('')}</tr>`:''}

@@ -1348,21 +1348,39 @@ document.getElementById('json-file').addEventListener('change', e=>{
    than sitting in the nav looking like a developer control.  Swaps the whole
    brand accent by setting data-palette on <html>; see the [data-palette] blocks
    in styles.css.  Storage is wrapped: some browsers refuse localStorage on a
-   file:// origin, and losing persistence must not take the switcher down. */
+   file:// origin, and losing persistence must not take the switcher down.
+   Default is Blue, not the CSS :root's own Orange — round 17 changed which
+   preset a fresh workspace opens on; Orange is still there in the list, just no
+   longer first-run. */
 (function(){
   const sel = document.getElementById('palette-switch');
   const store = {
     get(){ try{ return localStorage.getItem('finoptic-palette'); }catch(e){ return null; } },
     set(v){ try{ localStorage.setItem('finoptic-palette', v); }catch(e){ /* session only */ } }
   };
-  const saved = store.get() || 'orange';
+  const saved = store.get() || 'blue';
   document.documentElement.setAttribute('data-palette', saved);
   sel.value = saved;
+  paintFavicon(saved);
   sel.addEventListener('change', e=>{
     document.documentElement.setAttribute('data-palette', e.target.value);
     store.set(e.target.value);
+    paintFavicon(e.target.value);
   });
 })();
+
+/* The tab favicon is a static data URI (index.html) — it can't read var(--accent)
+   the way everything else does, so without this it would be the one element
+   left orange after switching palettes. Re-paints just the background rect's
+   fill; the white glyph on top never changes. Hex values mirror the --accent
+   each preset sets in styles.css (§ palette presets) — kept in sync by hand
+   since a data URI has no access to computed CSS. */
+function paintFavicon(palette){
+  const hex = {orange:'FF5600', blue:'146EF5', mono:'0B1220'}[palette] || '146EF5';
+  const link = document.getElementById('app-favicon');
+  if(!link) return;
+  link.href = link.href.replace(/fill="%23[0-9A-Fa-f]{6}"\/><g/, `fill="%23${hex}"/><g`);
+}
 
 /* ---- boot ----
    A shared link carries the whole view in its hash, so it is restored before

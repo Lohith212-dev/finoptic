@@ -249,10 +249,18 @@ function finnBlock(b){
                      + `<span class="fa-do-l">${b.lab}</span></p>`
                      + `<p class="fa-p">${b.p}</p></div>`;
     case 'note':return `<p class="fa-note">${b.v}</p>`;
-    case 'srcs':return b.v && b.v.length
-                     ? `<div class="fa-srcs"><span class="fa-srcs-l">Read from</span>`
-                       + b.v.map(s => `<span class="fa-src">${s}</span>`).join('') + `</div>`
-                     : '';
+    /* Clickable text, not chips (round 18) — "reducing the number of chips and
+       allowing the actual question tips to stand out" against the ones that
+       matter, `.finn-chip`. A name is a real control (clicking it toasts its
+       feed cadence and health, off the same D.sources row finnSrcNote reads),
+       so it earns an underline rather than a boxed background. */
+    case 'srcs':{
+      if(!b.v || !b.v.length) return '';
+      const links = b.v.map(s => `<button class="fa-src" type="button" data-finn-src="${s}">${s}</button>`);
+      const joined = links.length < 2 ? links.join('')
+        : links.slice(0, -1).join(', ') + ' and ' + links[links.length - 1];
+      return `<p class="fa-srcs">Read from ${joined}.</p>`;
+    }
     /* A plot is drawn INLINE, on its own tinted panel with a titled header.
        A Claude-style side pane was built for these and taken back out: splitting the
        sentence from the chart it is about makes the reader look in two places for
@@ -319,29 +327,23 @@ function finnGreetHTML(){
       · <b>${o.dsLabel}</b></p>
   </div>
   <div class="finn-next">
-    <p class="finn-next-l">Try one of these</p>
+    <p class="finn-next-l">A few you could ask</p>
     ${finnSuggestions(3).map(q =>
       `<button class="finn-chip" type="button" data-finn-ask="${q.id}">${q.q}</button>`).join('')}
-    <div style="width:100%; margin-top:8px">
-      <button class="btn sm ghost" type="button" data-finn-act="all">Browse all 24 questions</button>
-    </div>
   </div>`;
 }
 
-/* The full catalogue — kept, demoted. A presenter needs to find a question fast;
-   it is just not how anyone starts a conversation. Category headers carry the only
-   glyphs, exactly as the sidebar's group headers do (§8). */
-function finnAllHTML(){
-  return `<p class="finn-sect">Everything I can answer</p>
-    <div class="finn-all">
-      ${FINN_CATS.map(c => `
-        <div>
-          <h4 class="finn-cat-h2">${icon(c.ic, false)}${c.k}<span>${c.blurb}</span></h4>
-          <div class="finn-qs">
-            ${c.qs.map(q => `<button class="finn-q" type="button" data-finn-ask="${q.id}">${q.q}</button>`).join('')}
-          </div>
-        </div>`).join('')}
-    </div>`;
+/* Two origins are "the same" for display purposes when title, scope and dataset
+   label all match — the three fields finn-ctx actually shows. */
+function finnCtxHTML(o, pinned){
+  return `<div class="finn-ctx${pinned ? ' finn-ctx-pinned' : ''}">
+    <span class="finn-ctx-s">${o.title}</span>
+    ${o.scope ? `<span class="finn-ctx-f">${o.scope}</span>` : ''}
+    <span class="finn-ctx-d">${o.dsLabel}</span>
+  </div>`;
+}
+function finnSameOrigin(a, b){
+  return !!a && !!b && a.title === b.title && a.scope === b.scope && a.dsLabel === b.dsLabel;
 }
 
 /* ---- one turn -----------------------------------------------------------
@@ -357,14 +359,15 @@ function finnAllHTML(){
    working, and a verdict. Every one of them does something real — a chatbot is the
    easiest place in a product to build a row of controls that only look like
    controls, and §0.7 forbids exactly that. */
-function finnTurnHTML(t, i){
-  const o = t.origin;
+function finnTurnHTML(t, i, prev){
+  /* finn-ctx is PINNED TO THE SESSION (finnThreadHTML prints it once, above every
+     turn) — round 18: "should stay pinned to the session, not appear for every
+     user question." A turn only repeats it when the origin actually changed —
+     the reader switched screens or filters between two questions in the same
+     chat — which is the one case the context genuinely needs restating. */
+  const changed = i > 0 && !finnSameOrigin(t.origin, prev && prev.origin);
   return `<article class="finn-turn" data-finn-turn="${i}">
-    <div class="finn-ctx">
-      <span class="finn-ctx-s">${o.title}</span>
-      ${o.scope ? `<span class="finn-ctx-f">${o.scope}</span>` : ''}
-      <span class="finn-ctx-d">${o.dsLabel}</span>
-    </div>
+    ${changed ? finnCtxHTML(t.origin) : ''}
     <div class="finn-u-w">
       <div class="finn-u">${t.q}</div>
       <button class="finn-u-c tip tip-up" type="button" data-finn-copy="q${i}"
@@ -386,7 +389,7 @@ function finnThreadHTML(){
   return `${c.stale ? `<p class="finn-stale">This chat was asked on <b>${c.origin.dsLabel}</b>.
       You are now on <b>${RAW.label}</b>, so the figures below have been re-read from the
       dataset you are on.</p>` : ''}
-    ${c.turns.map(finnTurnHTML).join('')}
+    ${c.turns.map((t, i, arr) => finnTurnHTML(t, i, arr[i - 1])).join('')}
     <div class="finn-next" id="finn-next"></div>`;
 }
 
@@ -429,9 +432,17 @@ function finnRender(){
   const body = document.getElementById('finn-body');
   if(!body) return;
   body.innerHTML = FN.view === 'history' ? finnHistoryHTML()
-                 : FN.view === 'all'     ? finnAllHTML()
                  : FN.view === 'thread'  ? finnThreadHTML()
                  : finnGreetHTML();
+
+  /* Where this chat was asked from — the one PINNED copy, outside the scrolling
+     thread entirely (finn-ctx-top, static in index.html) so it never has to
+     fight a single position:sticky element against many turns' worth of scroll.
+     Only the thread view has a session to pin; the greeting already says "You
+     asked from…" inline, and history/catalogue have no single chat to name. */
+  const ctxTop = document.getElementById('finn-ctx-top');
+  if(ctxTop) ctxTop.innerHTML = (FN.view === 'thread' && FN.chat && FN.chat.turns.length)
+    ? finnCtxHTML(FN.chat.origin, true) : '';
 
   if(FN.view === 'thread' && FN.chat){
     FN.chat.turns.forEach((t, i) => { if(t.painted) finnPaintDone(i, t); });
@@ -640,13 +651,10 @@ function finnFollowups(){
   const host = document.getElementById('finn-next');
   if(!host || !FN.chat) return;
   const more = finnSuggestions(3);
-  host.innerHTML = (more.length
-      ? `<p class="finn-next-l">Next</p>` + more.map(q =>
-          `<button class="finn-chip" type="button" data-finn-ask="${q.id}">${q.q}</button>`).join('')
-      : '')
-    + `<div style="width:100%; margin-top:8px">
-         <button class="btn sm ghost" type="button" data-finn-act="all">All questions</button>
-       </div>`;
+  host.innerHTML = more.length
+    ? `<p class="finn-next-l">You could also ask</p>` + more.map(q =>
+        `<button class="finn-chip" type="button" data-finn-ask="${q.id}">${q.q}</button>`).join('')
+    : '';
 }
 
 /* =============================================================================
@@ -1362,7 +1370,6 @@ function finnBoot(){
         case 'new':       finnSkip(); FN.chat = null; FN.view = 'greet';
                           finnRender(); return;
         case 'history':   finnSkip(); FN.view = 'history'; finnRender(); return;
-        case 'all':       finnSkip(); FN.view = 'all'; finnRender(); return;
         case 'send':      finnSend(); return;
         case 'mic':       return;
       }
@@ -1375,6 +1382,16 @@ function finnBoot(){
 
     const mode = e.target.closest('[data-finn-mode]');
     if(mode){ finnSetMode(mode.dataset.finnMode); return; }
+
+    /* A source name is CLICKABLE TEXT, not an inert chip (round 18) — it acts by
+       surfacing the one thing D.sources actually knows about it beyond the name:
+       how often it feeds Finoptic and whether that feed is healthy right now. */
+    const src = e.target.closest('[data-finn-src]');
+    if(src){
+      const hit = (D.sources || []).find(s => s[0] === src.dataset.finnSrc);
+      if(hit) toast(hit[0], `${hit[2]} feed · ${hit[3]}`);
+      return;
+    }
 
     /* ---- what you can do with an answer ----
        `q3` copies the reader's own question, `3` copies Finn's answer to it — one
