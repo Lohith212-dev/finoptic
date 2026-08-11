@@ -369,7 +369,6 @@ S.ai = () => {
   const a=D.ai, mo=D.meta.months.slice(0,D.meta.closed);
   const mSeries = (a.m||[]).filter(v=>v!==null&&v!==undefined);
   const latest = mSeries[mSeries.length-1]||0, prev = mSeries[mSeries.length-2]||latest;
-  const mid = mSeries[Math.max(0,Math.floor(mSeries.length/2)-1)]||latest;
   const aiSave = sum(D.savingsByCat.filter(s=>/AI|Licence/i.test(s.k)).map(s=>s.v));
   const seats = sum(D.saas.filter(s=>s.cat==='AI').map(s=>s.lic));
   const active = sum(D.saas.filter(s=>s.cat==='AI').map(s=>s.active));
@@ -1244,7 +1243,6 @@ S.anomalies = () => {
 /* ---------- 13. Security ---------- */
 S.security = () => {
   const secTotal = sum(D.security.map(s=>s.v)), M = D.secMeta;
-  const prods = D.products.filter(p=>p.rev>0).length || 1;
   const Ysec = ytdView();
   return head('Security Cost','What protection costs, and which product is driving the ingestion bill.','Persona · ITFM + Security',
     [['Licence Utilisation',M.licUtil+'%',(100-M.licUtil)+'% of seats unused','warn'],
@@ -1555,7 +1553,7 @@ S.alerts = () => {
       delta:w?w.sev:'',dir:'up',foot:w?w.prod:'Nothing is open'}); })()}
   ${(()=>{ const b = A.slice().sort((x,y)=>(y.save||0)-(x.save||0))[0];
     return kpi({k:'Highest-Value Fix',ic:'savings',v:b?moneyK(b.save):'—',
-      delta:b?'a year if actioned':'',dir:'gup',foot:b?b.prod:'Nothing to action'}); })()}
+      delta:b?'A year, if actioned':'',dir:'gup',foot:b?b.prod:'Nothing to action'}); })()}
   ${(()=>{ const prods = [...new Set(A.map(a=>a.prod).filter(Boolean))];
     return kpi({k:'Products Affected',ic:'product',v:String(prods.length),
       foot:prods.length?prods.slice(0,2).join(', ')+(prods.length>2?' and '+(prods.length-2)+' more':'')
@@ -1597,9 +1595,18 @@ S.sources = () => head('Data Model','Every system behind every number in this pl
         row, which is the trap this whole exercise has to avoid.  No sparklines and
         no YTD bylines: a feed catalogue has no monthly history (SCHEMA.md, "What
         deliberately has NO series"). */''}
-  ${(()=>{ const daily = D.sources.filter(r=>/^daily$/i.test(String(r[2]||'Daily')));
-    return kpi({k:'Daily Feeds',ic:'calendar',v:daily.length+' of '+D.sources.length,
-      foot:'Refreshed every day, without a hand on it'}); })()}
+  ${/* The slowest cadence, not a count of the fastest.  "Daily feeds: 6 of 12" was
+        the first version and it lied by omission — four of the other six are HOURLY,
+        so the figure read as a shortfall where the truth was the opposite.  What a
+        reader of a lineage screen actually needs is the ceiling: the board is only
+        as fresh as its laggard, whatever the other eleven do. */''}
+  ${(()=>{ const RANK = {hourly:1,daily:2,weekly:3,monthly:4,quarterly:5};
+    const rk = r => RANK[String(r[2]||'Daily').toLowerCase()] || 3;
+    const slow = D.sources.length ? Math.max(...D.sources.map(rk)) : 0;
+    const on = D.sources.filter(r=>rk(r)===slow);
+    return kpi({k:'Slowest Refresh',ic:'calendar',v:on.length?on[0][2]:'—',
+      delta:on.length?on.length+' system'+(on.length===1?'':'s'):'',dir:'flat',
+      foot:on.length?'The board is only as fresh as this':'Nothing is feeding the model yet'}); })()}
   ${(()=>{ const doms = [...new Set(D.sources.map(r=>r[1]).filter(Boolean))];
     return kpi({k:'Domains Covered',ic:'layers',v:String(doms.length),
       foot:doms.length?doms.slice(0,3).join(' · ')+(doms.length>3?' and '+(doms.length-3)+' more':'')
@@ -1612,7 +1619,7 @@ S.sources = () => head('Data Model','Every system behind every number in this pl
       delta:bad.length?bad[0][3]:'',dir:bad.length?'up':'gup',
       foot:bad.length?bad[0][0]:'Every feed is current'}); })()}
   ${(()=>{ const man = D.sources.filter(r=>/manual|upload|csv/i.test(String(r[2]||'')+' '+String(r[3]||'')));
-    return kpi({k:'Manual Steps In The Chain',ic:'tag',v:String(man.length),
+    return kpi({k:'Feeds With A Manual Step',ic:'tag',v:String(man.length),
       foot:man.length?man.map(r=>r[0]).slice(0,2).join(', ')
                      :'Nothing on this board is keyed by hand'}); })()}
 

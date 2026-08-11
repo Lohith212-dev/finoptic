@@ -121,7 +121,7 @@ function lineChart(series, labels, o={}){
     if(!s.area) return;
     const pts = s.values.map((v,i)=>v===null||v===undefined?null:[x(i),y(v)]).filter(Boolean);
     if(pts.length<2) return;
-    const d = pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+    const d = smoothPath(pts);
     areas+=`<path d="${d} L${pts[pts.length-1][0]} ${y(0)} L${pts[0][0]} ${y(0)} Z" fill="url(#${s.grad})"/>`;
   });
   ticks.forEach(t=>{g+=`<line class="gridline" x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}"/>
@@ -130,7 +130,10 @@ function lineChart(series, labels, o={}){
   series.forEach(s=>{
     const pts = s.values.map((v,i)=>v===null||v===undefined?null:[x(i),y(v)]).filter(Boolean);
     if(!pts.length) return;
-    const d = pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+    /* ROUND 16: the same curve as the sparklines — see smoothPath().  The dots stay
+       exactly where they were, so the chart still says which point is a month and
+       which part is the line between two of them. */
+    const d = smoothPath(pts);
     g+=`<path d="${d}" fill="none" stroke="var(${s.color})" stroke-width="${s.w||1.75}" ${s.dash?`stroke-dasharray="4 3"`:''} stroke-linejoin="round"/>`;
     if(s.dots) pts.forEach(p=>g+=`<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="var(--surface)" stroke="var(${s.color})" stroke-width="1.5"/>`);
   });
@@ -158,6 +161,55 @@ function lineChart(series, labels, o={}){
   <div class="legend">${series.map(s=>`<div><i style="background:var(${s.color});${s.dash?'height:2px;border-radius:0':''}"></i>${s.name}</div>`).join('')}</div>`;
 }
 
+/* ---- monotone cubic interpolation (Fritsch-Carlson, 1980) ----
+   Turns a run of points into a smooth SVG path that never overshoots them.
+
+   The naive smoothing everyone reaches for first — Catmull-Rom, or a cardinal spline
+   at some tension — sets each point's tangent from its two NEIGHBOURS, which means a
+   local peak gets a tangent that carries the curve past it.  On a chart with a y-axis
+   that reads as a soft drawing; on a 76px sparkline with no axis at all it reads as a
+   value, and the value is invented.  Fritsch-Carlson adds one step: where the
+   secants either side of a point differ in sign the tangent is ZEROED (that point is
+   a genuine turn), and otherwise the tangent is clamped to three times the smaller
+   secant.  The result is guaranteed monotone between consecutive points, so every
+   high and low the eye finds is a month the dataset actually holds.
+
+   Emitted as cubic beziers with the control points at a third of the interval, which
+   is the standard Hermite-to-Bezier conversion for evenly spaced x. */
+function smoothPath(xy){
+  const n = xy.length;
+  if(n < 2) return '';
+  if(n === 2) return `M${xy[0][0].toFixed(1)} ${xy[0][1].toFixed(1)} L${xy[1][0].toFixed(1)} ${xy[1][1].toFixed(1)}`;
+  /* Secants first, then tangents clamped against them. */
+  const dx = [], dy = [], sec = [];
+  for(let i=0;i<n-1;i++){
+    dx[i] = xy[i+1][0] - xy[i][0];
+    dy[i] = xy[i+1][1] - xy[i][1];
+    sec[i] = dx[i] ? dy[i]/dx[i] : 0;
+  }
+  const m = new Array(n);
+  m[0] = sec[0];
+  m[n-1] = sec[n-2];
+  for(let i=1;i<n-1;i++){
+    /* A sign change means i is a peak or a trough: a flat tangent is what stops the
+       curve carrying past it. */
+    m[i] = (sec[i-1]*sec[i] <= 0) ? 0 : (sec[i-1]+sec[i])/2;
+  }
+  for(let i=0;i<n-1;i++){
+    if(sec[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
+    const a = m[i]/sec[i], b = m[i+1]/sec[i], h = Math.hypot(a,b);
+    if(h > 3){ m[i] = 3*a/h*sec[i]; m[i+1] = 3*b/h*sec[i]; }
+  }
+  let d = `M${xy[0][0].toFixed(1)} ${xy[0][1].toFixed(1)}`;
+  for(let i=0;i<n-1;i++){
+    const t = dx[i]/3;
+    d += ` C${(xy[i][0]+t).toFixed(1)} ${(xy[i][1]+m[i]*t).toFixed(1)}`
+       + ` ${(xy[i+1][0]-t).toFixed(1)} ${(xy[i+1][1]-m[i+1]*t).toFixed(1)}`
+       + ` ${xy[i+1][0].toFixed(1)} ${xy[i+1][1].toFixed(1)}`;
+  }
+  return d;
+}
+
 /* ---- the KPI sparkline (§7, round 14) ----
    "Instead of only showing selected months, show month-on-month trends for each KPI
    tile, in a small area rather than a full-size graph."
@@ -178,12 +230,11 @@ function lineChart(series, labels, o={}){
    would make sixty tiny charts into sixty status signals — the fault that took the
    icon tiles' colour away in v3.3.
 
-   `cumulative` is the difference between a flow and a stock (SCHEMA.md).  A tile
-   reading "Realised Savings $96K" is a year-to-date total, so its line has to climb
-   to $96K; drawing the raw monthly flow would put a flat line at ~$9K beside a
-   figure of $96K and invite exactly one question.  A stock — licences held, forecast
-   accuracy — is already a level and is drawn as it stands. */
-/* ---- round 15: DRAWN HEAVIER ----
+   `cumulative` USED to accumulate a flow before drawing it — see round 15 below,
+   which reverses that.  It is still accepted, and now ignored, because ~20 call
+   sites pass it and the flow/stock distinction it names is still real everywhere
+   else (SCHEMA.md, core.js). */
+/* ---- round 15: DRAWN HEAVIER, AND DRAWN MONTH BY MONTH ----
    "The sparklines are currently very small and barely noticeable.  I would like
    them to appear more visually weighted — thicker and more prominent."
 
@@ -199,7 +250,55 @@ function lineChart(series, labels, o={}){
    Width grew least because width is the dimension the tile cannot spare — at
    1280px the tightest figure leaves ~18px of slack beside the plot.  Height is
    free (the row is as tall as the figure) and stroke is free, which is why the
-   prominence comes from those two. */
+   prominence comes from those two.
+
+   THE CUMULATIVE LINE IS GONE, WHICH REVERSES ROUND 14.  Making the stroke heavier
+   is what made the real fault visible: a running total of positive months can only
+   ever ascend, so two thirds of the board was drawing the same near-straight
+   diagonal, and a shape that is identical on sixty tiles carries no information at
+   all.  Worse, it was not what was asked for either time — "show MONTH-ON-MONTH
+   trends for each KPI tile" is a request for the movement between months, and a
+   cumulative curve is precisely the transform that hides it.
+
+   Round 14's argument for accumulating was that a tile reading "Realised Savings
+   $96K" is a year-to-date total, so a line ending at $9K sits oddly beside it.  That
+   is a real objection and it is answered rather than ignored: a sparkline has no
+   axis and never claimed its last point equals the figure — that is the convention
+   everywhere the form is used — and this one answers a hover with the month and its
+   own value, so the reader who wonders is one pointer-move from the truth.  A shape
+   nobody can read is a worse trade than a scale nobody stated.
+
+   THE AXIS NO LONGER STARTS AT ZERO, for the same reason.  Monthly spend wobbles
+   around its own mean, and anchoring the floor at zero compresses that wobble into a
+   flat line near the top of the box.  The range is now the series' own, with one
+   guard: a series whose whole spread is under 12% of its mean is drawn FLAT rather
+   than stretched to fill the box, so a steady month is not amplified into drama.
+   Pass `zero:true` to force the old behaviour; nothing does yet. */
+/* ---- round 16: CURVED, AND IN THE THEME COLOUR ----
+   "They feel a bit like sharp corners, and they are all grey irrelevant to whatever
+   theme colour we selected."
+
+   COLOUR.  The line is `--c1` now, which IS `--accent` under the default and Blue
+   presets and `--g1` under Mono, so it follows the theme by construction rather than
+   by a second lookup.  This reverses 18.3's "grey, never accent", and the reversal is
+   the correct reading of the rule rather than an exception to it: §0.3 governs
+   full-strength accent CHROME — one pill, one button — and this is DATA INK, which
+   has worn the `--c1…--c8` spectrum on every donut, bar and line chart in the product
+   since v3.0.  The fault the grey rule was actually protecting against was a line
+   turning GREEN when it rose and RED when it fell, which would make sixty tiny plots
+   into sixty status signals.  One colour for all of them cannot signal anything, so
+   that fault is not reachable from here.  The area fill stays faint (.22 → 0) so four
+   tiles do not become four coloured blocks, and the end dot stays `--ink`: it marks
+   the latest reading, and a dot in the line's own colour disappears into the line.
+
+   CURVE.  Monotone cubic (Fritsch–Carlson), NOT a Catmull-Rom or a cardinal spline.
+   That choice is the whole of the honesty argument: an ordinary smoothing spline
+   OVERSHOOTS between points, so a series running 30 → 44 → 41 bulges above 44 and the
+   plot shows a month that did not happen.  Monotone interpolation clamps each
+   tangent to the neighbouring slopes, so the curve can never rise above a local
+   maximum or fall below a local minimum — every peak in the drawing is a month in the
+   data.  It is worth the twenty lines precisely because this is the one chart in the
+   product with no axis to check it against. */
 function sparkline(values, o={}){
   if(!Array.isArray(values)) return '';
   const W = o.w||76, H = o.h||32, P = 3.5;
@@ -207,26 +306,32 @@ function sparkline(values, o={}){
      nulls are dropped. */
   let pts = values.map((v,i)=>({v,i})).filter(p=>p.v!==null && p.v!==undefined && !Number.isNaN(p.v));
   if(!pts.length) return '';
-  if(o.cumulative){ let run = 0; pts = pts.map(p=>({v:(run+=p.v), i:p.i})); }
   const vals = pts.map(p=>p.v);
-  const hi = Math.max(...vals), lo = Math.min(...vals, o.zero===false?Math.min(...vals):0);
+  let hi = Math.max(...vals), lo = Math.min(...vals, o.zero===true?0:Math.min(...vals));
+  /* The flatness guard.  Without it a series running 30.1, 30.4, 30.2 fills the box
+     top to bottom and reads as violent movement; with it, the same series draws as
+     the flat line it is.  Measured against the MEAN rather than a fixed dollar
+     amount, because these tiles carry $K, percentages, seat counts and gigabytes. */
+  const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+  const floor = Math.abs(mean)*0.12;
+  if(hi-lo < floor){ const mid=(hi+lo)/2; hi = mid+floor/2; lo = mid-floor/2; }
   /* A flat series still has to draw ON the tile rather than through its edge, so a
      zero range parks the line halfway up instead of dividing by nothing. */
   const span = (hi-lo) || 1;
   const x = n => pts.length<2 ? W/2 : P + n*((W-P*2)/(pts.length-1));
   const y = v => hi===lo ? H/2 : P + (H-P*2)*(1-(v-lo)/span);
   const xy = pts.map((p,n)=>[x(n), y(p.v)]);
-  const col = o.color || NEUTRAL;
+  const col = o.color || '--c1';
 
   /* One point is a reading, not a trend: it gets the end dot and no stroke, which
      is what a ten-week-old workspace on a one-month period shows. */
   let g = '';
   if(xy.length>1){
-    const d = xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+    const d = smoothPath(xy);
     if(o.area!==false){
       const id = 'sk'+(++gradUid);
       g += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" style="stop-color:var(${col});stop-opacity:.26"/>
+        <stop offset="0" style="stop-color:var(${col});stop-opacity:.22"/>
         <stop offset="1" style="stop-color:var(${col});stop-opacity:0"/></linearGradient></defs>`
         + `<path d="${d} L${xy[xy.length-1][0].toFixed(1)} ${H} L${xy[0][0].toFixed(1)} ${H} Z" fill="url(#${id})"/>`;
     }
@@ -500,11 +605,15 @@ function bandChart(o){
   const U=seg(up),Dn=seg(dn);
   /* The confidence band is the accent at low alpha — it belongs to the actual
      series it brackets, so it takes that series' hue rather than a grey. */
+  /* Both edges take the same curve as the lines they bracket (round 16) — a
+     straight-edged band around two curved strokes would pinch away from them at
+     every turn.  The lower edge is drawn in reverse and its leading `M` becomes an
+     `L`, which is what joins the two edges into one closed region. */
   if(U.length&&Dn.length)
-    g+=`<path d="${U.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')} ${Dn.slice().reverse().map(p=>'L'+p[0]+' '+p[1]).join(' ')} Z" fill="var(--c1)" opacity=".14"/>`;
+    g+=`<path d="${smoothPath(U)} ${smoothPath(Dn.slice().reverse()).replace(/^M/,'L')} Z" fill="var(--c1)" opacity=".14"/>`;
   /* Dashed ghost line for the comparison series, neutral against the actual. */
   const line=(arr,col,dash)=>{const s=seg(arr);if(!s.length)return;
-    g+=`<path d="${s.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')}" fill="none" stroke="var(${col})" stroke-width="1.75" ${dash?'stroke-dasharray="4 3"':''}/>`};
+    g+=`<path d="${smoothPath(s)}" fill="none" stroke="var(${col})" stroke-width="1.75" ${dash?'stroke-dasharray="4 3"':''}/>`};
   line(base,'--g4',true); line(act,'--c1',false);
   g+=`<line x1="${x(closed-1)}" x2="${x(closed-1)}" y1="${Tp}" y2="${H-B}" stroke="var(--line-2)"/>
       <text class="axis" x="${x(closed-1)+5}" y="${Tp+9}">forecast →</text>`;

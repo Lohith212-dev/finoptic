@@ -977,6 +977,41 @@ html[data-stuck] .ledger{
 .ledger-stats .ledger-cell:first-child{padding-left:0}
 .ledger-stats .ledger-cell + .ledger-cell{border-left:1px solid var(--line)}
 .ledger-stats .ledger-cell:last-child{padding-right:8px}
+/* ---- round 15: the six lanes below 1300px ----
+   Two lanes have been clipping since the strip became six equal cells, and the
+   width harnesses have reported it for two rounds: at 1200px the anomalies value
+   ("1.8 days") runs 7px past its box and the ITSM label ("Response Cost Per
+   Incident") runs 18px past its own.  Everything inside a lane is
+   `white-space:nowrap` — deliberately, since a wrapped figure reads worse than a
+   tight one — so the overflow had nowhere to go and simply clipped.
+
+   The room comes from the GUTTERS, not from the type or the words: 15px a side is
+   generous at 1440 and is spare at 1280, and taking 7 of it back per side gives
+   every lane 14px it did not have.  Nothing here changes what a lane says, which
+   matters — the strip's own content is still out of scope, including the fabricated
+   "1.8 days" this rule now makes fit. */
+@media (max-width:1300px){
+  .ledger-stats .ledger-cell{padding:0 8px}
+  .ledger-stats .ledger-cell:first-child{padding-left:0}
+  .ledger-stats .ledger-cell:last-child{padding-right:4px}
+  /* The LABEL is allowed to wrap here, and only the label.  Everything in a lane is
+     nowrap by default, which is right for a figure and wrong for a phrase: at 1200px
+     "Response Cost Per Incident" ran 18px past its box and sat directly against
+     "Cost Per Change" in the next lane with no gap at all.  The figure and the
+     sub-line stay nowrap — a wrapped number is worse than a tight one — so the only
+     thing this costs is one extra line of 10.5px grey on the two screens that have
+     a label long enough to need it.
+
+     `min-height` is what makes that affordable.  Letting one label wrap while the
+     other five stay on one line put the six FIGURES on six different baselines,
+     because .ledger-stats centres its lanes — and six figures that do not line up is
+     a worse fault than the collision this is fixing, since comparing them is the
+     whole job of the strip.  Reserving two label lines in every lane costs ~13px of
+     strip height below 1300px and keeps every figure on one line. */
+  .ledger-stats .ledger-k{
+    font-size:10.5px; white-space:normal; line-height:1.3; min-height:2.6em;
+  }
+}
 
 /* Collapse (§7) — it is persistent chrome, so it has to be dismissible.
    Collapsed it does not disappear: it keeps the one line that matters, because
@@ -1022,6 +1057,22 @@ html[data-ledger="min"] .ledger-stats .ledger-cell:last-child{padding-right:6px}
    keeps them all present rather than dropping one or letting the row overrun. */
 html[data-ledger="min"] .ledger-stats{
   flex-wrap:wrap; row-gap:8px;
+}
+/* ---- round 15: the collapsed strip below 1300px ----
+   The COLLAPSED variant is the one that was actually failing the width harnesses:
+   its lanes are `max-content max-content` grids, so each cell is as wide as its own
+   longest label plus its own figure, and on the anomalies screen — "Mean Time To
+   Explain" beside "1.8 days" — six of those ran 5px past the page at 1200px.
+
+   MUST SIT AFTER the block above, not inside the earlier @media that handles the
+   expanded strip.  These selectors and those are the same specificity, so a media
+   query placed before them loses on source order and does nothing at all — which is
+   exactly what the first attempt at this fix did, silently. */
+@media (max-width:1300px){
+  html[data-ledger="min"] .ledger-stats .ledger-cell{padding:0 7px}
+  html[data-ledger="min"] .ledger-stats .ledger-cell:first-child{padding-left:0}
+  html[data-ledger="min"] .ledger-stats .ledger-cell:last-child{padding-right:4px}
+  html[data-ledger="min"] .ledger-stats .ledger-k{font-size:10.5px}
 }
 
 /* ---------- content grid (§4, §8) ---------- */
@@ -1137,9 +1188,9 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
    the pane you are reading, not a call to action competing with the Do column's own
    button a few pixels above it. */
 .sum-more{
-  grid-column:1 / -1; margin:15px -4px -18px; z-index:2; position:relative;
+  grid-column:1 / -1; margin:12px -4px -11px; z-index:2; position:relative;
   display:flex; align-items:center; justify-content:center; gap:5px;
-  padding:11px 22px 12px; border:0; cursor:pointer;
+  padding:10px 22px 11px; border:0; cursor:pointer;
   background:rgba(255,255,255,.045);
   border-top:1px solid rgba(255,255,255,.13);
   font:600 12px/1 var(--sans); letter-spacing:.005em;
@@ -1150,24 +1201,14 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
 .sum-more:hover{background:rgba(255,255,255,.085); color:#fff}
 .sum-more:hover span{transform:translateX(3px)}
 .sum-more:focus-visible{outline:2px solid rgba(255,255,255,.5); outline-offset:-2px}
-/* ---- round 15: the same footnote, on the canvas ----
-   "With the Metrics tab as the default, we should have a 'View Key Insights'
-   button, similar to the existing 'View KPIs' button in the Key Insights block."
-
-   Same control, same words, opposite surface — so the two panes end the same way and
-   the pair reads as one switch rather than as a button that only exists on one side.
-   It is a full-width CELL of the tile grid rather than a block after it: the tiles
-   are separate cards with nothing to sit inside, and spanning the grid is what gives
-   the footnote an edge to align to.  Hairline over fill, because on a warm canvas a
-   filled bar under four quiet white tiles would be the heaviest object in the pane
-   and it is the least important one (§7). */
-.sum-more-canvas{
-  grid-column:1 / -1; margin:2px 0 0; z-index:auto;
-  background:none; border-top:1px solid var(--line);
-  color:var(--ink-3); padding:12px 22px;
-}
-.sum-more-canvas:hover{background:rgba(11,18,32,.035); color:var(--ink)}
-.sum-more-canvas:focus-visible{outline:2px solid var(--ink-3); outline-offset:-2px}
+/* ROUND 16 DELETED `.sum-more-canvas`, the matching footnote on the Metrics pane.
+   Round 15 built it for symmetry with the one above, and symmetry was the wrong
+   instinct: "it kind of feels like it is floating mid-air."  A footer works inside
+   the band because the band is ONE SURFACE and the footer is part of that object;
+   the tile grid is four separate cards on a canvas, so anything sitting below them
+   belongs to nothing — a hairline made it look unmoored and giving it its own white
+   bar only made a fifth object out of the least important thing in the pane.  See
+   placeSummary() for why the resulting asymmetry is earned rather than tolerated. */
 /* ---- round 14: the band carries LESS WEIGHT ----
    "I would like it to visually get a lesser weight, but I don't want to change it
    too much — I would still want it to be an ink panel, but the content within it
@@ -1179,9 +1220,21 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
    Between them the panel loses roughly a third of its height, which is where the
    "lesser weight" actually comes from — a paragraph of prose reads heavy because
    it is a block of text, not because of its colour. */
+/* ---- round 15: down again, and the surface is STILL not the lever ----
+   "It is still too emphatic and the content is excessive."  Three things carry the
+   second cut, and the ink panel is not one of them (it is still the one INK panel on
+   a screen, §7 — that rule has survived every round and this one does not touch it).
+
+   ONE: the band is no longer what the reader lands on.  Metrics is the default pane
+   now, so the band is a tab away, and a thing you choose to open is by construction
+   less emphatic than a thing that opens itself.  That is most of the answer.
+   TWO: one pointer per authored column instead of two (points(), components.js).
+   THREE: the type, the padding and the accent bleed all step down once more — 12.5px
+   to 12, 13/14 to 10/11, and the corner glow from 20% to 13%, which is the part that
+   was reading as heat rather than as a surface. */
 .briefing{
   display:grid; grid-template-columns:repeat(3,1fr); gap:0;
-  margin:0 0 var(--grid-gap); padding:13px 4px 14px;
+  margin:0 0 var(--grid-gap); padding:10px 4px 11px;
   background:linear-gradient(158deg,#111A2B 0%,var(--ink) 58%);
   border-radius:var(--r-surface); box-shadow:var(--shadow-1);
   position:relative; overflow:hidden;
@@ -1191,10 +1244,10 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
 .briefing::after{
   content:''; position:absolute; inset:0; pointer-events:none;
   background:radial-gradient(120% 150% at 100% 0%,
-    color-mix(in srgb,var(--accent) 20%,transparent) 0%, transparent 58%);
+    color-mix(in srgb,var(--accent) 13%,transparent) 0%, transparent 58%);
 }
 .brief{
-  display:flex; flex-direction:column; gap:6px; padding:0 18px;
+  display:flex; flex-direction:column; gap:5px; padding:0 18px;
   position:relative; z-index:1; min-width:0;
 }
 .brief + .brief{border-left:1px solid rgba(255,255,255,.13)}
@@ -1203,7 +1256,7 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
   font-size:9.5px; font-weight:600; letter-spacing:.02em; text-transform:none;
   color:rgba(255,255,255,.5);
 }
-.brief p{margin:0; font-size:13.5px; line-height:1.5; color:rgba(255,255,255,.82)}
+.brief p{margin:0; font-size:12px; line-height:1.45; color:rgba(255,255,255,.82)}
 .brief p b{color:#fff; font-weight:600}
 /* The pointers.  A real <ul>, so the marker is the list's and the second line of a
    long pointer wraps against the first line's TEXT rather than under its bullet —
@@ -1211,10 +1264,10 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
    The marker is a 3px dot at 38% rather than a disc glyph: at 12.5px a browser
    bullet is nearly as wide as the space between two pointers, and it read as a
    third level of emphasis on a panel that already has two. */
-.brief-p{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px}
+.brief-p{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px}
 .brief-p li{
   position:relative; padding-left:11px;
-  font-size:12.5px; line-height:1.45; color:rgba(255,255,255,.8);
+  font-size:12px; line-height:1.45; color:rgba(255,255,255,.78);
 }
 .brief-p li::before{
   content:''; position:absolute; left:0; top:.5em;
@@ -1225,10 +1278,10 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
    figure takes a green mixed UP for a dark surface: --pos-ink is a deep green
    chosen to be readable on white and is nearly invisible here. */
 .brief-cta{
-  display:flex; align-items:center; gap:12px; margin-top:auto; padding-top:15px;
+  display:flex; align-items:center; gap:12px; margin-top:auto; padding-top:11px;
 }
 .brief-cta b{
-  font-family:var(--metric); font-size:23px; font-weight:700; letter-spacing:-.02em;
+  font-family:var(--metric); font-size:19px; font-weight:700; letter-spacing:-.02em;
   line-height:1; color:#5BE49B;
 }
 .brief-cta > span{font-size:11px; color:rgba(255,255,255,.5); flex:1; line-height:1.3}
@@ -1379,6 +1432,11 @@ html:not([data-sum="insights"]) .sum-pane[data-sum-pane="metrics"]{display:block
   content:'·'; margin-left:7px;
   color:var(--ink-4); font-weight:400;
 }
+/* The second row: the qualifier, on its own line under the figures.  It is the
+   same 11px grey it always was — what changed is that it stopped sharing a line
+   with two measurements it has nothing in common with. */
+.kpi-f + .kpi-f{margin-top:3px}
+.kpi-note{color:var(--ink-3)}
 /* The YTD byline.  Deliberately the SAME treatment as the reconciliation strip's
    sub-line (.ledger-sub, §7) — full ink at 500 against the foot's grey — because
    the whole point of it is that the strip and the tiles now read the same way:

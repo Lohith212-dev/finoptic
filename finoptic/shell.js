@@ -639,24 +639,29 @@ function placeSummary(){
   wrap.querySelector('[data-sum-pane="insights"]').appendChild(band);
   const met = wrap.querySelector('.sum-kpis');
   lead.forEach(el=>met.appendChild(el));
-  /* ---- the two footnotes ----
-     Each pane ends with a way out of itself, and they are the same control twice:
-     both carry `data-sum-tab`, which is all the switch handler below matches on.
+  /* ---- ONE footnote, and only where a surface can hold it ----
+     The band ends with a way out of itself, spanning its three columns INSIDE the ink
+     panel, so it reads as the band's own footer rather than as a button parked
+     underneath it.  It carries `data-sum-tab`, which is all the switch handler below
+     matches on — so the footnote and the tab are the same control twice.
 
-     The insight one sits INSIDE the band, spanning its three columns, so it reads as
-     the band's own footer rather than as a button parked underneath it.  The metrics
-     one is a full-width cell of the tile grid, for the same reason in reverse — the
-     tiles are separate cards on the canvas with nothing to sit inside, so the grid
-     itself is what gives it an edge to align to.
+     ROUND 16 REMOVED THE MATCHING ONE ON THE METRICS PANE.  It was built in round 15
+     for symmetry — "with Metrics as the default we should have a View Key Insights
+     button" — and symmetry was the wrong instinct: "it kind of feels like it is
+     floating mid-air."  Exactly right, and the reason is structural rather than
+     stylistic.  The band is one SURFACE, so a footer inside it is part of an object.
+     The tile grid is four SEPARATE cards on the canvas, so a control below them
+     belongs to nothing and floats however it is styled — giving it its own white bar
+     was tried and only made a fifth object out of the least important thing in the
+     pane.
 
-     The metrics footnote is new and is the half of the default swap that makes it
-     safe: moving the reader's landing to the figures would otherwise bury the
-     commentary behind a control they have no reason to press. */
+     The asymmetry that leaves is earned rather than tolerated.  A footnote out of a
+     pane is for a pane you read to the END and finish somewhere far from the tabs;
+     that is the band, three columns of prose deep.  The Metrics pane is four figures
+     you scan in a second with the tab control still in view above them, so the exit
+     it needs is the one already there. */
   band.insertAdjacentHTML('beforeend',
     `<button type="button" class="sum-more" data-sum-tab="metrics">View KPIs
-       <span aria-hidden="true">›</span></button>`);
-  met.insertAdjacentHTML('beforeend',
-    `<button type="button" class="sum-more sum-more-canvas" data-sum-tab="insights">View Key Insights
        <span aria-hidden="true">›</span></button>`);
 }
 

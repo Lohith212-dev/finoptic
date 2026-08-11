@@ -178,7 +178,26 @@ const kpi = ({k,v,foot,delta,dir,hero,ic,tone,ytd,spark,sparkOpts}) => {
           Active Contracts (SCHEMA.md, "What deliberately has NO series") — is
           simply a figure on its own and needs no second layout. */''}
     <div class="kpi-fig"><span class="kpi-v">${v}</span>${sk?`<span class="kpi-spark">${sk}</span>`:''}</div>
-    ${ytd||foot||delta?`<div class="kpi-f">${ytd?`<span class="kpi-ytd">${ytd}</span>`:''}${delta?`<span class="delta ${dir||'flat'}">${delta}</span>`:''}${foot?`<span>${foot}</span>`:''}</div>`:''}
+    ${/* ---- round 15: the byline is TWO ROWS, and the figures in the first are
+          divided ----
+          "In all the tiles we have multiple byline items that are not actually
+          separated — they only differ in font weight and colour.  What if we
+          separate them with a dot or a vertical pipe?"
+
+          Right, and the fix is a divider AND a break, because the three things that
+          used to run together are not the same kind of thing.  `ytd` and `delta` are
+          MEASUREMENTS — a standing figure and a movement — so they share a row and
+          take the middot between them.  `foot` is the qualifier that says what the
+          tile is counting, so it takes its own row and needs no divider at all.
+
+          The break also fixes what a divider alone could not.  One row of all three
+          wrapped at a different point on every tile, which left the middot hanging
+          at the end of a line looking like a typo; two short rows of like with like
+          cannot wrap, so the divider only ever appears between two figures.  Each
+          row is emitted only if it has content, so a tile with no delta is one line
+          shorter rather than one line emptier. */''}
+    ${ytd||delta?`<div class="kpi-f">${ytd?`<span class="kpi-ytd">${ytd}</span>`:''}${delta?`<span class="delta ${dir||'flat'}">${delta}</span>`:''}</div>`:''}
+    ${foot?`<div class="kpi-f kpi-note">${foot}</div>`:''}
   </div>`;
 };
 
@@ -338,8 +357,8 @@ const MISS_PROBES = [
     const top = v[0]+v[1]+v[2], sh = top/s.total*100;
     if(sh < 50) return null;
     return {score:missScore(sh, 50, 92),
-      html:`Three of ${universe} ${s.many} are <b>${sh.toFixed(0)}%</b> of it — `
-         + `${money(top)} of ${money(s.total)}. Everything below them is rounding`
+      html:`Three of ${universe} ${s.many} are <b>${sh.toFixed(0)}%</b> of it. `
+         + `Everything below them is rounding`
          + `${s.deal ? ', so this is three conversations, not thirty' : ''}.`};
   },
 
@@ -358,8 +377,8 @@ const MISS_PROBES = [
     const M = D.meta.months;
     return {score:missScore(Math.min(sh,160), 55, 130),
       html:`<b>${sh.toFixed(0)}%</b> of the ${money(Math.abs(tot))} `
-         + `${tot>0?'overrun':'underspend'} landed in ${M[n-k]}–${M[n-1]} alone — `
-         + `a recent break, not a level the year has carried.`};
+         + `${tot>0?'overrun':'underspend'} landed in ${M[n-k]}–${M[n-1]}. `
+         + `A recent break, not a level the year has carried.`};
   },
 
   /* The latest closed month against the year's own average, and what that pace
@@ -375,9 +394,9 @@ const MISS_PROBES = [
     const f = v => count ? Math.round(v).toLocaleString('en-US') : money(v);
     const M = D.meta.months;
     return {score:missScore(Math.abs(p), 6, 34),
-      html:`${M[A.length-1]} closed <b>${missNum(p)}</b> against this year's own `
-         + `${f(avg)} average${s.sNoun ? ' of ' + s.sNoun : ''}. Held twelve months, `
-         + `that pace is <b>${f(last*12)}</b>.`};
+      html:`${M[A.length-1]} closed <b>${missNum(p)}</b> against the year's own `
+         + `${f(avg)} average${s.sNoun ? ' of ' + s.sNoun : ''}. `
+         + `Held twelve months, that pace is <b>${f(last*12)}</b>.`};
   },
 
   /* The fastest mover, from the per-month series each row carries.  First third
@@ -399,9 +418,9 @@ const MISS_PROBES = [
     if(win.p < 12 || win.p - est < 8) return null;
     const noun = s.moverOne || s.one;
     return {score:missScore(win.p - est, 8, 80),
-      html:`<b>${win.r.k}</b> is the fastest-moving ${noun}: <b>${missNum(win.p)}</b> `
-         + `from the year's opening months to its latest, against ${missNum(est)} for `
-         + `the estate. That is what sets next year's base — not the biggest line.`};
+      html:`<b>${win.r.k}</b> is the fastest-moving ${noun} — <b>${missNum(win.p)}</b> `
+         + `against ${missNum(est)} for the estate. `
+         + `That is what sets next year's base, not the biggest line.`};
   },
 
   /* Rows individually immaterial, collectively not.  Every list on the board is
@@ -415,9 +434,9 @@ const MISS_PROBES = [
     const t = sum(small);
     if(t < v[1]) return null;
     return {score:missScore(t/s.total*100, 8, 40),
-      html:`${small.length} ${s.many} sit under ${money(cut)} each and are `
-         + `<b>${money(t)}</b> together — more than the second-largest line. None is `
-         + `big enough to get reviewed on its own.`};
+      html:`${small.length} ${s.many} under ${money(cut)} each are `
+         + `<b>${money(t)}</b> together. `
+         + `More than the second-largest line, and none big enough to get reviewed.`};
   },
 
   /* WHAT THE FIGURES ARE BUILT FROM.  Not a fact about spend at all, which is
@@ -460,10 +479,9 @@ const MISS_LOCAL = {
     const hi = r[0], lo = r[r.length-1];
     if(hi.i < lo.i*1.6) return null;
     return {score:missScore(hi.i/Math.max(.1,lo.i), 1.6, 6),
-      html:`<b>${hi.k}</b> spends <b>${hi.i.toFixed(1)}%</b> of its revenue on `
-         + `technology, against ${lo.i.toFixed(1)}% for ${lo.k} — `
-         + `<b>${(hi.i/Math.max(.1,lo.i)).toFixed(1)}×</b> the intensity. Cost ranks `
-         + `them one way; cost per dollar earned ranks them another.`};
+      html:`<b>${hi.k}</b> spends <b>${hi.i.toFixed(1)}%</b> of revenue on technology `
+         + `against ${lo.k}'s ${lo.i.toFixed(1)}% — <b>${(hi.i/Math.max(.1,lo.i)).toFixed(1)}×</b>. `
+         + `Cost ranks them one way; cost per dollar earned ranks them another.`};
   },
   /* One log source usually IS the SIEM bill, and its month-on-month move is the
      part nobody looks at until the invoice arrives. */
@@ -477,8 +495,8 @@ const MISS_LOCAL = {
     if(sh < 25) return null;
     const mv = Number(top.delta)||0;
     return {score:missScore(sh, 25, 62) * (Math.abs(mv)>15?1:.6),
-      html:`<b>${top.src}</b> — <b>${sh.toFixed(0)}%</b> of everything the SIEM `
-         + `ingests${mv ? ` — moved ${missNum(mv)} this month` : ''}. Licence cost `
+      html:`<b>${top.src}</b> is <b>${sh.toFixed(0)}%</b> of SIEM ingestion`
+         + `${mv ? `, ${missNum(mv)} this month` : ''}. Licence cost `
          + `follows volume, so one ${top.prod||'product'} setting moves the whole bill.`};
   },
   /* What the untagged remainder does to every per-unit figure on the board.  The
@@ -489,9 +507,9 @@ const MISS_LOCAL = {
     if(!u || !tot) return null;
     const sh = u/tot*100, res = sum((D.tagging||[]).map(t=>t.res));
     return {score:missScore(sh, 1.5, 12),
-      html:`<b>${money(u)}</b> — ${sh.toFixed(1)}% — cannot be traced to anything that `
-         + `owns it${res?`, across ${res} resources`:''}. Every cost-per-product and `
-         + `cost-per-customer figure in the product is a floor, not a total.`};
+      html:`<b>${money(u)}</b> — ${sh.toFixed(1)}% — has no owner`
+         + `${res?`, across ${res} resources`:''}. `
+         + `Every cost-per-thing on the board is a floor, not a total.`};
   },
   /* The board's freshest number is only as fresh as its slowest input, and the
      cadence column is the only place that is written down. */
@@ -501,9 +519,9 @@ const MISS_LOCAL = {
     const slow = src.filter(r=>!/daily|hourly|real/i.test(String(r[2]||'Daily')));
     if(!slow.length) return null;
     return {score:missScore(slow.length/src.length*100, 6, 50),
-      html:`${src.length-slow.length} feeds land daily and <b>${slow.length}</b> do not `
+      html:`<b>${slow.length}</b> of ${src.length} feeds do not land daily `
          + `— ${[...new Set(slow.map(r=>String(r[2]).toLowerCase()))].slice(0,2).join(' and ')}. `
-         + `Today's figure is exactly as old as the slowest input behind it.`};
+         + `Today's figure is as old as the slowest input behind it.`};
   },
   /* A ticket and an incident cost wildly different amounts, and the incident RATE
      is what decides which. */
@@ -513,10 +531,9 @@ const MISS_LOCAL = {
     const rate = I.incidents/I.tickets*100, mult = I.perIncident/I.perTicket;
     if(mult < 1.6) return null;
     return {score:missScore(mult, 1.6, 6),
-      html:`<b>${rate.toFixed(1)}%</b> of tickets are incidents `
-         + `(${I.incidents} of ${I.tickets.toLocaleString('en-US')}), and each costs `
-         + `$${I.perIncident.toFixed(0)} against $${I.perTicket.toFixed(2)} — `
-         + `<b>${mult.toFixed(1)}×</b> more. The volume is in tickets; the money is not.`};
+      html:`<b>${rate.toFixed(1)}%</b> of tickets are incidents, and each costs `
+         + `<b>${mult.toFixed(1)}×</b> more. `
+         + `The volume is in tickets; the money is not.`};
   }
 };
 
@@ -553,10 +570,26 @@ function missedHTML(id){
    no space after the stop.  Capped at two, and a third sentence is DROPPED rather
    than folded into the second — a pointer that runs to three lines is the paragraph
    this round removed, wearing a bullet. */
-function points(text){
+/* ---- round 15: ONE, not two ----
+   "The Key Insights block is still too emphatic and the content is excessive.  I
+   need it shortened.  Since we haven't been able to shorten it effectively, please
+   try again."
+
+   `max` defaults to 1 now.  Round 14 turned three paragraphs into three lists of up
+   to two and that was the wrong unit of reduction — a list of two sentences is a
+   paragraph with a bullet in the middle of it.  What the band is for is the one
+   thing per column worth carrying out of the room, so each authored column prints
+   its FIRST sentence and drops the rest.
+
+   Nothing is lost that the screen does not already hold: `why` and `do` are authored
+   per dataset and their opening sentence is the finding, with the remainder being
+   elaboration that the cards below the band state in full.  The derived column is
+   the exception and passes 2, because its two pointers are two DIFFERENT findings
+   rather than one finding continued. */
+function points(text, max=1){
   if(!text) return [];
   return String(text).split(/(?<=\.)\s+(?=[A-Z<])/)
-    .map(s=>s.trim()).filter(Boolean).slice(0,2);
+    .map(s=>s.trim()).filter(Boolean).slice(0,max);
 }
 
 /* ---- the briefing band (§7) ----
@@ -592,15 +625,16 @@ function briefing(id){
      </div>`;
   /* Each probe writes a finding AND its implication, as two sentences — "Three of 8
      categories are 71% of it. Everything below them is rounding, so this is three
-     conversations, not thirty."  Two probes at two sentences each is four sentences,
-     which is the paragraph this round removed wearing two bullets.
-     So: TWO probes contribute a sentence each, ONE probe contributes both of its.
-     Splitting every probe and taking the first two sentences was the other option
-     and it is worse — it prints one finding twice over and drops the second
-     entirely, when the whole point of the scoring is that the two are different
-     kinds of notable. */
-  const whatPts = !missed ? null
-    : missed.length > 1 ? missed.map(h=>points(h)[0]) : points(missed[0]);
+     conversations, not thirty."
+
+     ROUND 15: the FINDING only, always.  Round 14 printed both sentences whenever a
+     single probe fired, which is how a cell meant to hold pointers ended up holding
+     a paragraph again on every screen where only one probe had something to say.
+     Now each finding contributes exactly one sentence and at most two findings
+     print, so this cell is one or two lines and never more — and the implications
+     were rewritten as second sentences that the first does not depend on, so
+     dropping them costs the reader nothing they cannot see on the screen itself. */
+  const whatPts = !missed ? null : missed.map(h=>points(h)[0]);
   return `<div class="briefing">
     ${whatPts ? cell('what','What You Might Miss',whatPts)
               : cell('what','What Is Happening',points(b.what))}

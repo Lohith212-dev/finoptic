@@ -773,6 +773,7 @@ ever since** — they were not reporting a pass, they were not running at all.
 the page by **5px on `anomalies` at 1200px when collapsed** — `Mean Time To Explain` and its
 `3 critical, 2 high` sub-line are the widest counterfoil in the product. Strip content this round
 did not touch; it simply became visible when the harnesses started running again.
+*Fixed in round 15 — see the strip section there. It was never one bug.*
 
 **Regression:** `test-metrics.js` 90 renders · 278 tiles · 149 sparklines · 146 bylines, no tile
 restating a lane. `test-screens.js` 120 clean renders. `test-ledger.js` 450/450. `test-panel.js` OK
@@ -781,3 +782,112 @@ headings still Title Case**. `test-order.js` 100 tables, 63 ranked lists, 20 don
 descending. `test-finn.js` **288 answers, 6 datasets, 0 errors**. `test-finn-motion.js` mark still
 byte-identical. `gen-monthly.js --check` re-verifies all 66 series against their totals and refuses
 to write if a dataset does not round-trip byte-for-byte.
+
+# Round 15 — 11 August 2026 · one shape, and a line you can actually read
+
+*The second half of the SME's note on the same region, given after round 14 shipped. Four items, and
+the shape of it is that round 14 answered each request literally and two of the answers made a new
+problem: the sparkline was drawn in a way that hides the movement it was asked to show, and the
+"screens with one tile lose the tab" rule fixed the count by breaking the layout.*
+
+**The item worth reading twice is 15.3.** Round 14 was told to remove the duplication, removed it,
+and left five screens holding a single tile — so those screens dropped the tab control and stacked
+the two panes instead. That was a defensible local fix and the wrong global one: *"users remember
+the previous screen layout, and a sudden change in presentation does not help them."* A product with
+two summary layouts is worse than one with a thin Metrics pane, because the reader pays the cost on
+every navigation rather than on one screen. The lesson is that **the count and the shape are two
+problems**, and fixing the count at the shape's expense is not a fix.
+
+| # | Asked for | Passes when |
+|---|---|---|
+| 15.1 | **The sparklines are thicker and more visually weighted** | Box 64x22 to **76x32**, stroke 1.4 to **2.6**, end dot 1.9 to **2.6**, area fill .22 to .26. Colour unchanged and deliberately so: the reference dashboard draws its lines in that product's own blue, and the accent budget on a board screen is one object which the period pill holds (§0.3). The plot can now shrink (`flex:0 1 76px`, `width:100%`) rather than push a wide figure out of the tile. |
+| 15.2 | **A month-on-month trend, not a running total** | Not asked for in these words — but making the stroke heavier is what made the fault visible. A cumulative line over positive months can only ascend, so two thirds of the board drew the same near-straight diagonal, and *"show month-on-month trends"* is a request for the movement between months, which is exactly what accumulating hides. **`cumulative` is now accepted and ignored**, and the axis no longer starts at zero — with a guard: a series whose whole spread is under **12% of its mean** draws flat rather than being stretched into false drama. This reverses **14.4**. |
+| 15.3 | **The byline items are separated** | *"In all the tiles we have multiple byline items that are not actually separated — they only differ in font weight and colour."* Two rows, and a **middot** between the figures in the first. `ytd` and `delta` are measurements and share a row with the divider between them; `foot` is the qualifier and takes its own row. The break matters as much as the divider: one row of three wrapped at a different point on every tile, which left the middot hanging at the end of a line looking like a typo. |
+| 15.4 | **Every board screen carries exactly four tiles** | 16 screens x 6 datasets, asserted by `test-metrics.js`: **380 tiles, no screen with three and none with five.** One full row, no widow on a second — *"when there are five tiles, the entire second row is empty, leaving only the fifth tile in that row."* One exemption, named in the harness rather than skipped: a workspace with no products at all renders the empty state, because four tiles over nothing would be four em dashes. |
+| 15.5 | **The layout does not change between screens** | `.sum-flat` is **deleted** — the flat variant, its CSS, and the branch in `placeSummary()` that chose it. Every screen with a band and tiles is tabbed. **`sources` gained a summary region for the first time**: it had no KPI tiles at all, so `placeSummary()` returned early and its insight band rendered raw in the flow with no headline and no tabs — the same inconsistency one step further on, and nobody had noticed it because the screen has no numbers to duplicate. This reverses **14.6**. |
+| 15.6 | **Metrics is the default tab** | `sumTab()` falls back to `metrics`; the CSS selector is written against `insights` so the no-attribute case lands on the tiles. **Reverses round 11's** *"the default view should be the key-insight view, the black tile view"* — and it is the same argument arriving from the other side. The counter-argument that kept the band (a board pack does not hand over figures without commentary) never required it to go first. |
+| 15.7 | **A "View Key Insights" button, like the existing "View KPIs"** | Both panes end with a way out of themselves, carrying the same `data-sum-tab` the tabs do, so the footnote and the tab are one control with two presentations. "View KPIs" sits inside the ink band spanning its three columns; **"View Key Insights" is a full-width cell of the tile grid** — the tiles are separate cards with nothing to sit inside, so the grid is what gives it an edge to align to. Hairline over fill on the canvas: a filled bar under four quiet white tiles would be the heaviest object in the pane and it is the least important one. |
+| 15.8 | **The band is shorter again** | *"It is still too emphatic and the content is excessive. Since we haven't been able to shorten it effectively, please try again."* Three cuts, and the ink panel is not one of them. **One pointer per authored column** (`points()` defaults to `max=1`), the derived column keeps two because its two are two different findings rather than one finding continued. **Every probe sentence rewritten** so the finding stands alone and the implication is a second sentence that can be dropped. Type 12.5 to 12px, padding 13/14 to 10/11, corner glow 20% to 13%, the CTA figure 23 to 19px. |
+
+## The strip, and why two things in it changed
+
+Ruled out of scope in round 14 and mostly still is. Two exceptions, both defects rather than content:
+
+* **`Forecast Accuracy '94.2%'`** was the last hardcoded figure in the product — a literal string in
+  the forecasting strip. `meta.forecastAcc` has existed since round 14 and the ITFM tile has been
+  reading it, so **the strip and that tile disagreed on every dataset but the baseline**. That is
+  the SME's own complaint (the two components saying different things) in its purest form.
+* **The 1200px overflow**, recorded last round as residual, is **fixed**. It was never one bug: the
+  gutters were 15px a side where 8 would do, and below 1300px `Response Cost Per Incident` ran 18px
+  past its box and sat flush against `Cost Per Change` with no gap at all. The label may now wrap and
+  **every lane reserves two label lines**, so the six figures still share a baseline — letting one
+  label wrap while five did not put six figures on six different heights, which is a worse fault
+  than the collision, since comparing them is the whole job of the strip.
+
+  *Recorded, still unfixed:* the strip's own `Tagging Compliance` (`cov − 3.3`, `+4.2 pts QoQ`) and
+  `Mean Time To Explain` (`1.8 days`, `−0.6 days`) are fabricated. The anomalies screen can now
+  answer the second honestly — `anomalies[].d` is a real detection date and **Oldest Open Anomaly**
+  reads it — so the strip is the only place left in the product still asserting it.
+
+## What this round deleted
+
+* **`Oldest Open Alert '11 days'`** — the alerts screen's only tile, and its figure was a literal
+  string. `alerts[]` carries no date of any kind, so there was nothing behind it to recompute from.
+  The same class as round 14's deletions, found because this round had to look at the tile again.
+* **`Security Cost Per Product`** — `secTotal / prods`, the whole security bill divided by a count
+  with no allocation behind it, on a screen whose own subtitle is *"which product is driving the
+  ingestion bill"*. A flat average per product denies the thing the screen exists to show.
+* **`Growth Over The Half Year`** on the AI screen — it printed `+106.3%` with `$16K → $33K` beneath
+  it: a start point, an end point and the ratio between them, which is three descriptions of the
+  shape the sparkline next to it now draws in full.
+* **`Environments`** on the cloud screen and **`Licences Purchased`** on SaaS. The first is a
+  structural count that could carry neither a trend nor a byline; the second folded into
+  `Active Licences`, which already printed the utilisation those two are the numerator and
+  denominator of.
+
+## The seventeen tiles this round wrote
+
+Every one reads a field the dataset already carries, and `test-metrics.js` confirms none restates a
+strip lane on its own screen. **`anomalies` and `optimize` are the two worth checking**: the anomaly
+age is derived from `anomalies[].d` against `meta.asOf` (using the same open/closed test as the
+`Resolved This Month` tile, so the two cannot disagree about which rows are open), and
+`High-Confidence Savings` filters `opps[].conf`, which is authored per opportunity.
+
+| Screen | Added |
+|---|---|
+| `allocation` | Largest Cost Owner · Largest Tag Gap · Untagged Resources |
+| `forecast` | Budget Remaining · Scenarios Within Budget · Largest Forecast Driver |
+| `anomalies` | Largest Single Anomaly · **Oldest Open Anomaly** · Products Affected |
+| `itsm` | Incident Ratio · Costliest Product To Support · Service Desk Cost Per Employee |
+| `alerts` | Largest Single Alert · Highest-Value Fix · Products Affected · Owners On The Hook |
+| `sources` | Slowest Refresh · Domains Covered · Feeds Needing Attention · Feeds With A Manual Step |
+| `finance` | Full-Year Budget Used |
+| `optimize` | High-Confidence Savings |
+
+**Regression:** `test-metrics.js` **96 renders · 380 tiles · 139 sparklines · 147 bylines**, no tile
+restating a lane, four tiles and two tabs everywhere. `test-panel.js` OK on every screen, Metrics
+leading. `test-screens.js` 120 clean renders. `test-ledger.js` 450/450 stats not duplicated.
+`test-insights.js` placement and derived text OK. `test-headings.js` **3,846 headings Title Case**.
+`test-order.js` 100 tables, 63 ranked lists, 20 donut+legend pairs all descending. `test-widths.js`
+and `test-ledger-collapsed.js` **clear at every width in both states for the first time since round
+14**. `test-finn.js` 288 answers, 0 errors. `test-finn-motion.js` mark still byte-identical.
+`gen-monthly.js --check` all 66 series reconcile.
+
+# Round 16 — 11 August 2026 · the line, and the button that floated
+
+*Three items, given on the round-15 build. Two of them reverse a rule written the same
+afternoon, which is worth stating plainly rather than burying: **18.3 said the
+sparkline is grey and never accent, and 18.5 built a second footnote for symmetry.**
+Both are undone here, and in both cases the round-15 reasoning was sound in isolation
+and wrong once it was on the screen.*
+
+| # | Asked for | Passes when |
+|---|---|---|
+| 16.1 | **Remove the "View Key Insights" button — "it kind of feels like it is floating mid-air"** | `.sum-more-canvas` is gone: the markup in `placeSummary()`, the CSS, and the assertion in `test-panel.js`, which is **inverted rather than deleted** so the control cannot come back by accident. The diagnosis is structural, not stylistic — the band's footnote works because the band is ONE SURFACE and a footer inside it is part of that object, where the tile grid is **four separate cards** and anything below them belongs to nothing. Giving it its own white bar was tried and only made a fifth object out of the least important thing in the pane. |
+| 16.2 | **The sparkline is smooth and curved, not sharp** | **Monotone cubic (Fritsch–Carlson)**, not a Catmull-Rom or a cardinal spline — and that choice is the whole of the honesty argument. An ordinary smoothing spline **overshoots**: a series running 30 → 44 → 41 bulges above 44, and on a 76px plot with no axis that bulge reads as a month that did not happen. Monotone interpolation zeroes the tangent at every local turn and clamps it elsewhere, so the curve can never leave the range of the two months it sits between. `test-metrics.js` **proves it rather than asserting it**: it walks every Bezier control point on all 139 plots and checks it lies inside its segment's anchor range (a cubic is contained in its control hull, so that is sufficient). Swapping the tangent rule for the naive one produces **84 overshoot failures**; the shipped one produces none. |
+| 16.3 | **The sparkline follows the theme colour** | The stroke is `--c1`, which IS `--accent` under the default and Blue palettes and `--g1` under Mono — so it themes by construction rather than by a second lookup, and the Mono board comes out entirely in ink. This **reverses 18.3**, and it is the correct reading of §0.3 rather than an exception to it: that rule governs full-strength accent **chrome** — one pill, one button — and a sparkline is **data ink**, which has worn the `--c1…--c8` spectrum on every donut, bar and line chart since v3.0. The fault the grey rule was guarding against was a line turning green when it rose and red when it fell, which would make sixty tiny plots into sixty status signals; **one colour for all of them cannot signal anything**, so that fault is not reachable from here. The area fill drops to .22 so four tiles do not become four coloured blocks, and the end dot stays `--ink` — it marks the latest reading, and a dot in the line's own colour disappears into the line. |
+
+**Regression:** unchanged from round 15 and re-run in full — `test-metrics.js` 96 renders ·
+380 tiles · 139 sparklines · 147 bylines · **zero overshoots** · `test-panel.js` OK on every
+screen · `test-screens.js` 120 clean renders · `test-ledger.js` 450/450 · `test-insights.js`
+OK · `test-order.js` all descending.
